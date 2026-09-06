@@ -6,15 +6,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Fixed
+- **"Give axe" crash**: `z:setPrimaryHandItem` fires `OnEquipPrimary`, and
+  vanilla `FishingHandler` (and friends) call `player:getPlayerNum()` on the
+  equipper - nil on a zombie. The equip lands fine, so the calls are now
+  `pcall`-wrapped to swallow the listener's throw.
 - Context-menu callbacks no longer crash when an `ALH.*` entry point is
-  momentarily nil (a partial hot-reload) - they go through a `call()` guard that
-  logs instead. ("Give axe" hit this.)
+  momentarily nil (a partial hot-reload) - they go through a `call()` guard.
 
 ### Changed
-- **Easier to command a chop**: right-click a helper -> **Chop nearest tree**
-  (`ALH.chopNearestTree` scans ~8 tiles for the closest tree) - no need to select
-  it and aim at a specific tree first. The tree-tile option stays, and now shows
-  a disabled "needs an axe" hint when the selected helper is unarmed.
+- **`Chop a tree` is now a click-a-tree cursor** (`ALH_ChopCursor`, a one-shot
+  copy of vanilla `ISChopTreeCursor`): right-click a helper -> Chop a tree ->
+  hover highlights trees, click the one you want. Replaces the janky "Chop
+  nearest tree". The tree-tile "Send `<name>` to chop this tree" option stays,
+  now with a disabled "needs an axe" hint when the selected helper is unarmed.
 
 ### Added
 - **Chop system: felling + resources** (`feat(work)`, D-3): a chopping helper now

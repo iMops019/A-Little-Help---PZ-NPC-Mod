@@ -5,8 +5,8 @@
       - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu, plus (when a
         helper is selected) "Send <name> here" and, on a tree, chop it
       - top-level "<name> (helper)" for each helper on the clicked tile
-        -> Come here / Follow me|Stay / Give axe|Chop nearest tree / Select /
-           Send away
+        -> Come here / Follow me|Stay / Give axe|Chop a tree / Select / Send away
+           ("Chop a tree" -> ALH_ChopCursor: click the tree you want)
 ]]
 
 ALH_ContextMenu = ALH_ContextMenu or {}
@@ -30,8 +30,11 @@ function ALH_ContextMenu.onFollow(worldobjects, rec)               call("follow"
 function ALH_ContextMenu.onStay(worldobjects, rec)                 call("stay", rec) end
 function ALH_ContextMenu.onGiveAxe(worldobjects, rec)              call("giveAxe", rec) end
 function ALH_ContextMenu.onChopTree(worldobjects, rec, tree)       call("chopTree", rec, tree) end
-function ALH_ContextMenu.onChopNearest(worldobjects, rec)          call("chopNearestTree", rec) end
 function ALH_ContextMenu.onSendAway(worldobjects, rec)             call("removeNPC", rec) end
+
+function ALH_ContextMenu.onChopPick(worldobjects, rec, player)
+    if ALH_ChopCursor then ALH_ChopCursor.begin(rec, player) end
+end
 
 function ALH_ContextMenu.onGoHere(worldobjects, player, square)
     if ALH.selected then call("goTo", ALH.selected, square) end
@@ -102,7 +105,7 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
         end
 
         if rec.armed then
-            hsub:addOption("Chop nearest tree", worldobjects, ALH_ContextMenu.onChopNearest, rec)
+            hsub:addOption("Chop a tree", worldobjects, ALH_ContextMenu.onChopPick, rec, player)
         else
             hsub:addOption("Give axe", worldobjects, ALH_ContextMenu.onGiveAxe, rec)
         end

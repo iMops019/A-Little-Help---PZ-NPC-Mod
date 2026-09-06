@@ -23,9 +23,10 @@ A-Little-Help/
         client/                     loaded on the client only (this whole mod)
           ALH_00_Core.lua           namespace, log, hookEvent, devReload
           ALH_10_Keybinds.lua       Options > Key Bindings rows
-          ALH_20_Main.lua           NPC-list model, window control, G key
+          ALH_20_Main.lua           model, window control, commands, per-tick AI
           ALH_30_NPCMenu.lua        the ISCollapsableWindow
-          ALH_40_ContextMenu.lua    the "ALH NPC" right-click submenu
+          ALH_35_ChopCursor.lua     "Chop a tree" click-a-tree cursor
+          ALH_40_ContextMenu.lua    the right-click menu
       scripts/   (future)        item / recipe / vehicle definitions
   deploy.ps1                     dev: copy into the game + auto-enable
   dev-deploy.bat                 double-click wrapper for deploy.ps1
@@ -71,7 +72,8 @@ The game loads a context's files **alphabetically**, so ALH files carry a
 3. `ALH_20_Main.lua` - the NPC-list model and window open/close/toggle; hooks
    `OnKeyStartPressed` for the G toggle. Reads `ALH.*` from Core.
 4. `ALH_30_NPCMenu.lua` - defines the `ALH_NPCMenu` window class.
-5. `ALH_40_ContextMenu.lua` - hooks `OnFillWorldObjectContextMenu`.
+5. `ALH_35_ChopCursor.lua` - the `ALH_ChopCursor` cursor class (`ISBuildingObject`).
+6. `ALH_40_ContextMenu.lua` - hooks `OnFillWorldObjectContextMenu`.
 
 At *load* time a file only touches `ALH.*` that `ALH_00_Core` has already
 defined; everything domain-specific is deferred to event time.
@@ -108,7 +110,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.follow(rec)` / `ALH.stay(rec)` *(Main)* | `rec.order = "follow"` (OnTick re-paths) / clear order + `setPath2(nil)` |
 | `ALH.giveAxe(rec)` *(Main)* | `AddItem("Base.Axe")` + set primary & secondary hand item; `rec.armed = true` |
 | `ALH.chopTree(rec, tree)` *(Main)* | `rec.order = "chop"` + `rec.chopTree`; `tickHelper` walks to it and loops `chopSwing` |
-| `ALH.chopNearestTree(rec)` *(Main)* | scan ~8 tiles for the closest tree, then `ALH.chopTree` |
+| `ALH_ChopCursor.begin(rec, player)` *(35)* | enter click-a-tree cursor mode; the clicked tree -> `ALH.chopTree` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -160,7 +162,9 @@ test)`. Context callbacks are invoked by the engine as
   "Helpers: N" count.
   Adds **"Send `<selected>` here"** when `ALH.selected` is a living helper.
 - **`<name>  (helper)`** per living helper on the clicked tile -> Come here /
-  Follow me|Stay / Give axe|Chop nearest tree / Select / Send away.
+  Follow me|Stay / Give axe|Chop a tree / Select / Send away. "Chop a tree"
+  enters `ALH_ChopCursor` (a one-shot vanilla-style cursor - hover highlights
+  trees, click one to order the chop).
   `worldobjects` carries only static tile objects, not characters, so we find
   helpers ourselves: `helpersAt(square)` walks `ALH.npcs` for one whose square is
   at the clicked Z and within ~1.5 tiles (`DistToSquared < 2.25`).
