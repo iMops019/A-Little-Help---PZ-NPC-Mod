@@ -25,7 +25,22 @@ function ALH_NPCMenu:new(x, y, width, height)
     o.minimumHeight   = 260
     o.backgroundColor = { r = 0.06, g = 0.07, b = 0.09, a = 0.95 }
     o.borderColor     = { r = 0.40, g = 0.65, b = 0.92, a = 1.0 }
+    o:setWantKeyEvents(true)   -- receive onKeyRelease / isKeyConsumed (ESC to close)
     return o
+end
+
+-- ESC closes the window. isKeyConsumed then stops the same keypress reaching the
+-- pause-menu handler (ToggleEscapeMenu, which runs on key release), so the first
+-- ESC closes this window and a second ESC opens the pause menu - same as the
+-- vanilla build / craft / map windows.
+function ALH_NPCMenu:onKeyRelease(key)
+    if key == Keyboard.KEY_ESCAPE then
+        self:close()
+    end
+end
+
+function ALH_NPCMenu:isKeyConsumed(key)
+    return key == Keyboard.KEY_ESCAPE
 end
 
 function ALH_NPCMenu:createChildren()

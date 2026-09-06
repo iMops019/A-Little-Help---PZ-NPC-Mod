@@ -107,6 +107,11 @@ Terms and conventions this codebase relies on.
   `ISTickBox`, `ISContextMenu`.
 - Buttons dispatch via `target`/`onclick`; we tag each with `button.internal` and
   switch on it in one `onButton` method.
+- **Key events on a widget:** `setWantKeyEvents(true)` in `:new`, then implement
+  `onKeyPress(key)` / `onKeyRelease(key)` (actions) and `isKeyConsumed(key)`
+  (return true to stop that key reaching global handlers). The engine calls the
+  action hook then `isKeyConsumed` for visible want-key-events widgets. This is
+  how a window closes on ESC without also opening the pause menu.
 
 ### World / characters (for v0.2+)
 

@@ -130,6 +130,11 @@ register call because ISLayoutManager's restore cache only refreshes on save.
 - `close()` is overridden to snapshot geometry (`ALH.rememberWindowRect`), then
   `removeFromUIManager()` and null out `ALH.menu`, so the next `G` press builds a
   fresh instance (no stale state) in the same place.
+- **ESC to close:** `setWantKeyEvents(true)` in `:new`, then `onKeyRelease`
+  closes on `KEY_ESCAPE` and `isKeyConsumed` returns true for it. The engine
+  runs the pause-menu handler on key *release* and skips it when a visible
+  want-key-events widget consumed the key - so ESC closes this window, a second
+  ESC opens the pause menu (vanilla build/craft/map behaviour).
 
 ## The right-click menu (`ALH_40_ContextMenu.lua`)
 

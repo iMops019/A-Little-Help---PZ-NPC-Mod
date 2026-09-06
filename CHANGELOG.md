@@ -6,6 +6,9 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **ESC closes the window** (`feat(ui)`): when the helper window is open, ESC
+  closes it and is consumed, so it doesn't also open the pause menu; a second ESC
+  does. Standard vanilla build/craft/map behaviour.
 - **Window remembers its position/size** (`feat(ui)`): a G-toggle reopens the
   window where you left it (`ALH.windowRect`), and it survives a game restart via
   `ISLayoutManager` (`Zomboid/Lua/layout.ini`). `devReload` reuses this instead
