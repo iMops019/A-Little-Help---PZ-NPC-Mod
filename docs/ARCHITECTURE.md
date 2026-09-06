@@ -97,12 +97,25 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH._eventHandlers` | `key -> {event, fn}` registry backing `hookEvent` |
 | `ALH.npcs` *(Main)* | array of stub tables `{ id, name, x, y, z }` - the model |
 | `ALH.menu` *(Main)* | the live `ALH_NPCMenu` instance, or `nil` when closed |
+| `ALH.windowRect` *(Main)* | `{x,y,w,h}` of the window's last position, or `nil` for a centred default |
 | `ALH.spawnNPC(square)` *(Main)* | append a stub (no world actor yet); refreshes the menu |
 | `ALH.removeNPC(stub)` *(Main)* | drop a stub; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
+| `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
 holds NPC state, it rebuilds its list box from `ALH.npcs` in `refreshList()`.
+
+### Window position
+
+`ALH.windowRect` is the source of truth for where the window sits. Every close
+path routes through `ALH_NPCMenu:close()`, which calls
+`ALH.rememberWindowRect(self)` before teardown, so `openMenu` can put the next
+one back. `openMenu` also `ISLayoutManager.RegisterWindow`s it under
+`"ALH_helper"` - that restores the on-disk geometry (`Zomboid/Lua/layout.ini`)
+on the first open of a session and writes it back on game save, so the position
+also survives a restart. On later opens `ALH.windowRect` is re-applied after the
+register call because ISLayoutManager's restore cache only refreshes on save.
 
 ## The window (`ALH_30_NPCMenu.lua`)
 
@@ -114,8 +127,9 @@ holds NPC state, it rebuilds its list box from `ALH.npcs` in `refreshList()`.
 - Buttons are dispatched by a string tag: each button gets `btn.internal =
   "SPAWN" | "REMOVE" | "REFRESH" | "CLOSE" | "DEVRELOAD"`, and `onButton(btn)`
   switches on it. Add a button = add a tag + a branch.
-- `close()` is overridden to also `removeFromUIManager()` and null out
-  `ALH.menu`, so the next `G` press builds a fresh instance (no stale state).
+- `close()` is overridden to snapshot geometry (`ALH.rememberWindowRect`), then
+  `removeFromUIManager()` and null out `ALH.menu`, so the next `G` press builds a
+  fresh instance (no stale state) in the same place.
 
 ## The right-click menu (`ALH_40_ContextMenu.lua`)
 

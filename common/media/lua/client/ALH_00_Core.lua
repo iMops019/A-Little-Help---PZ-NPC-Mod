@@ -65,12 +65,10 @@ function ALH.devReload()
         return 0
     end
 
-    local reopen, wx, wy = false, nil, nil
-    if ALH.menu then
-        reopen = true
-        wx, wy = ALH.menu:getX(), ALH.menu:getY()
-        ALH.closeMenu()
-    end
+    -- closeMenu remembers the window's geometry (ALH.windowRect); openMenu
+    -- restores it, so the reloaded window comes back in the same place.
+    local reopen = ALH.menu ~= nil
+    if reopen then ALH.closeMenu() end
 
     local count = 0
     for i = 0, getLoadedLuaCount() - 1 do
@@ -82,13 +80,7 @@ function ALH.devReload()
     end
     ALH.log("devReload: re-ran " .. count .. " file(s)")
 
-    if reopen then
-        ALH.openMenu()
-        if ALH.menu and wx then
-            ALH.menu:setX(wx)
-            ALH.menu:setY(wy)
-        end
-    end
+    if reopen then ALH.openMenu() end
 
     local player = getPlayer()
     if player then

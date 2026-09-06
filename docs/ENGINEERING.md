@@ -124,6 +124,7 @@ Terms and conventions this codebase relies on.
 | Term | Meaning |
 | --- | --- |
 | **`ModData`** | Per-save key/value store. `getPlayer():getModData()`, or global via `ModData.getOrCreate("ALH")`. Auto-saved with the game; transmit in MP. |
+| **`ISLayoutManager`** | Saves window geometry to `Zomboid/Lua/layout.ini` (global, all saves). `RegisterWindow(name, class, instance)`; restores in that call, saves on `OnPostSave`. Its restore cache only refreshes on save — pair it with an in-memory rect for correct in-session behaviour. |
 | **Sandbox options** | Player-set knobs defined in `sandbox-options.txt`, read via `SandboxVars`. |
 | **Translations** | `common/media/lua/shared/Translate/<lang>/*.txt`; looked up with `getText("IGUI_...")`. |
 | **`-debug`** | Launch flag. `getDebug()` is true; unlocks the debug menu, `reloadLuaFile`, spawn tools. Gate dev-only UI on `getDebug()`. |

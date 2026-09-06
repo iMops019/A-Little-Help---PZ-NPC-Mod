@@ -6,9 +6,20 @@
     model, and the G keypress.
 ]]
 
+require "ISUI/ISLayoutManager"
+
+local WINDOW_W, WINDOW_H = 340, 400
+local LAYOUT_NAME        = "ALH_helper"   -- ISLayoutManager key (global namespace)
+
 -- Tracked NPCs. Placeholders in this version: Spawn NPC appends a stub so the
 -- window and list box have something to show. Real actors arrive in v0.2.
 ALH.npcs = ALH.npcs or {}
+
+-- Remembered window geometry { x, y, w, h }, or nil for a centred default.
+-- Updated every time the window closes, so a G-toggle reopens where you left it.
+-- ISLayoutManager (below) seeds it from disk on the first open of a session and
+-- writes it back on game save, so it also survives a restart.
+ALH.windowRect = ALH.windowRect or nil
 
 --- Append a placeholder NPC. No world actor is created yet.
 --- @param square IsoGridSquare|nil  tile to pin it to (default: the player's)
@@ -47,23 +58,50 @@ function ALH.removeNPC(stub)
     if ALH.menu then ALH.menu:refreshList() end
 end
 
---- Open the helper window, unless it is already open.
+--- Open the helper window, unless it is already open. Restores its last
+--- position/size from ALH.windowRect (or centres it if there isn't one yet).
 function ALH.openMenu()
     if ALH.menu then return end
     if not getPlayer() then return end
 
-    local w, h = 340, 400
-    local x = (getCore():getScreenWidth() - w) / 2
-    local y = (getCore():getScreenHeight() - h) / 2
+    local r = ALH.windowRect
+    local w = (r and r.w) or WINDOW_W
+    local h = (r and r.h) or WINDOW_H
+    local x = (r and r.x) or (getCore():getScreenWidth()  - w) / 2
+    local y = (r and r.y) or (getCore():getScreenHeight() - h) / 2
 
     ALH.menu = ALH_NPCMenu:new(x, y, w, h)
     ALH.menu:initialise()
     ALH.menu:addToUIManager()
+
+    -- Persist geometry across game sessions (Zomboid/Lua/layout.ini). Registering
+    -- also restores the on-disk layout right now - what we want on the first open
+    -- of a session. On later opens ALH.windowRect is fresher, so re-apply it.
+    ISLayoutManager.RegisterWindow(LAYOUT_NAME, ALH_NPCMenu, ALH.menu)
+    if r then
+        ALH.menu:setX(r.x)
+        ALH.menu:setY(r.y)
+    end
+
     ALH.menu:refreshList()
     ALH.log("menu opened")
 end
 
---- Close the helper window, if it is open. ALH_NPCMenu:close() clears ALH.menu.
+--- Snapshot a window's geometry into ALH.windowRect. The window calls this as it
+--- tears down, so every close path - G, the Close button, the title-bar X - is
+--- covered from one place.
+function ALH.rememberWindowRect(window)
+    window = window or ALH.menu
+    if not window then return end
+    if window.isCollapsed then return end   -- height would be the title bar only
+    ALH.windowRect = {
+        x = window:getX(),     y = window:getY(),
+        w = window:getWidth(), h = window:getHeight(),
+    }
+end
+
+--- Close the helper window, if it is open. ALH_NPCMenu:close() remembers the
+--- position and clears ALH.menu.
 function ALH.closeMenu()
     if ALH.menu then ALH.menu:close() end
 end

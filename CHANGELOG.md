@@ -6,6 +6,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Window remembers its position/size** (`feat(ui)`): a G-toggle reopens the
+  window where you left it (`ALH.windowRect`), and it survives a game restart via
+  `ISLayoutManager` (`Zomboid/Lua/layout.ini`). `devReload` reuses this instead
+  of its own position dance.
 - **Focus guard** (`feat(keybind)`): `G` no longer toggles the window while the
   player is entering text (chat, rename dialog, map search, debug console). Done
   by moving the toggle from `OnKeyPressed` to `OnKeyStartPressed`, which the

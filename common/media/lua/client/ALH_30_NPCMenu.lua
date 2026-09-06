@@ -158,6 +158,7 @@ end
 
 -- Close via our own button, the title-bar X, or a second G press all route here.
 function ALH_NPCMenu:close()
+    ALH.rememberWindowRect(self)   -- so the next open reopens where this was
     ISCollapsableWindow.close(self)
     self:removeFromUIManager()
     if ALH.menu == self then
