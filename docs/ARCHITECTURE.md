@@ -15,29 +15,47 @@ Target: **Build 42** (developed against 42.20.4). Client-side, single-player.
 
 ```
 A-Little-Help/
-  mod.info                     game-facing metadata (id = ALittleHelp)
-  media/
-    lua/
-      client/                  loaded on the client only (this whole mod)
-        ALH_Keybinds.lua
-        ALH_Main.lua
-        ALH_NPCMenu.lua
-        ALH_ContextMenu.lua
-    scripts/   (future)         item / recipe / vehicle definitions
-  deploy.ps1                    dev: copy into the game + auto-enable
-  dev-deploy.bat                double-click wrapper for deploy.ps1
-  docs/                         you are here
+  common/                        the entire mod payload
+    mod.info                     metadata (id = ALittleHelp)
+    poster.png  icon.png
+    media/
+      lua/
+        client/                  loaded on the client only (this whole mod)
+          ALH_Keybinds.lua
+          ALH_Main.lua
+          ALH_NPCMenu.lua
+          ALH_ContextMenu.lua
+      scripts/   (future)        item / recipe / vehicle definitions
+  deploy.ps1                     dev: copy into the game + auto-enable
+  dev-deploy.bat                 double-click wrapper for deploy.ps1
+  docs/                          you are here
 ```
 
-`deploy.ps1` copies `media/` + `mod.info` into `Zomboid\mods\ALittleHelp\`, then
-inserts `mod = ALittleHelp,` into `Zomboid\mods\default.txt` (the ordered list the
-New Game screen reads) so the mod is always pre-enabled. It is idempotent.
-`-Saves latest|all` also patches existing saves' `mods.txt`; `-Launch` starts the
-game; `-NoEnable` skips the list edits. Full loop is in the README.
+### Why `common/` and not a flat `media/`
 
-`media/lua/client/` is the only code path right now. When NPC logic needs to run
-authoritatively (multiplayer, or anything the server should own) it goes in
-`media/lua/server/`; code shared by both goes in `media/lua/shared/`.
+B42's local-mod scanner (`ZomboidFileSystem.getAllModFoldersAux`, verified by
+disassembly) only registers a folder under `<user>/Zomboid/mods/` if it contains
+**`common/mod.info`** or **`<gameversion>/mod.info`** (e.g. `42/mod.info`). A bare
+`mod.info` at the mod root is **ignored for local mods** - the folder never
+appears in the Mods list and any `default.txt` entry for it is stripped at
+launch, silently. (Steam Workshop mods are enumerated by a different path and
+don't have this constraint, which is why most published mods still look flat.)
+
+`common/` applies to every game version; add a `42/` (or `42.20/`) sibling later
+only if we need version-specific overrides. `deploy.ps1` also drops a copy of
+`mod.info`/`poster.png` at the deployed mod root - harmless, and closer to how a
+Workshop package is laid out.
+
+`deploy.ps1` mirrors `common/` into `Zomboid\mods\ALittleHelp\common\`, forces
+`mod.info` to CRLF (PZ's parser is line-based), then inserts `mod = ALittleHelp,`
+into `Zomboid\mods\default.txt` (the ordered list the New Game screen reads) so
+the mod is pre-enabled. Idempotent. `-Saves latest|all` also patches existing
+saves' `mods.txt`; `-Launch` starts the game; `-NoEnable` skips the list edits.
+
+`common/media/lua/client/` is the only code path right now. When NPC logic needs
+to run authoritatively (multiplayer, or anything the server should own) it goes in
+`common/media/lua/server/`; code shared by both goes in
+`common/media/lua/shared/`.
 
 ### Load order
 

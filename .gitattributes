@@ -3,6 +3,11 @@
 
 # Windows-only helper stays CRLF on checkout
 *.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# PZ's mod.info / *.txt config parsers split on CRLF - force it
+mod.info text eol=crlf
+*.info   text eol=crlf
 
 # Binary assets
 *.png binary

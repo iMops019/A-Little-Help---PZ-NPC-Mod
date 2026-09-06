@@ -7,7 +7,12 @@
     re-tick anything.
 
     There is no "build" for a PZ mod - the game reads the .lua files directly.
-    "Deploy" just means: copy media/ + mod.info into the right place.
+    "Deploy" just means: copy common/ into the right place.
+
+    B42 discovery rule (from ZomboidFileSystem.getAllModFoldersAux): a folder in
+    <user>/Zomboid/mods is only registered if it has common/mod.info or
+    <version>/mod.info. A bare mod.info at the mod root is ignored for local
+    mods. Hence the common/ layout.
 
     Usage:
       powershell -ExecutionPolicy Bypass -File deploy.ps1
@@ -87,18 +92,30 @@ function Add-ModToList($path) {
 # ---------------------------------------------------------------------------
 Write-Head "1. Copy mod -> $modDst"
 New-Item -ItemType Directory -Force -Path $modDst | Out-Null
-robocopy "$src\media" "$modDst\media" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+
+# clean up a previous flat-layout deploy (media/ at the mod root)
+if (Test-Path "$modDst\media") { Remove-Item "$modDst\media" -Recurse -Force }
+
+# common/ is the whole payload (mod.info, poster.png, icon.png, media/)
+robocopy "$src\common" "$modDst\common" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed (exit $LASTEXITCODE)" }
 
-# mod.info + root assets (poster.png is REQUIRED - B42 won't list the mod without it)
-foreach ($f in 'mod.info', 'poster.png', 'icon.png') {
-    if (Test-Path "$src\$f") { Copy-Item "$src\$f" "$modDst\$f" -Force }
+# mod.info: PZ's parser is line-based; keep it CRLF no matter how git checked it
+# out. Write it to common/ (required for discovery) and the root (belt + braces).
+$info = [System.IO.File]::ReadAllText("$src\common\mod.info") -replace "`r?`n", "`r`n"
+if ($info[-1] -ne "`n") { $info += "`r`n" }
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText("$modDst\common\mod.info", $info, $utf8)
+[System.IO.File]::WriteAllText("$modDst\mod.info", $info, $utf8)
+foreach ($f in 'poster.png', 'icon.png') {
+    if (Test-Path "$modDst\common\$f") { Copy-Item "$modDst\common\$f" "$modDst\$f" -Force }
 }
-if (-not (Test-Path "$modDst\poster.png")) {
-    Write-Host "  ! poster.png missing - B42 will silently skip the mod" -ForegroundColor Red
+
+if (-not (Test-Path "$modDst\common\mod.info")) {
+    Write-Host "  ! common\mod.info missing - B42 will not discover the mod" -ForegroundColor Red
 }
-$fileCount = (Get-ChildItem "$modDst\media" -Recurse -File).Count
-Write-Host "  copied mod.info + poster + $fileCount file(s) under media/"
+$fileCount = (Get-ChildItem "$modDst\common\media" -Recurse -File).Count
+Write-Host "  copied common\ (mod.info, poster, $fileCount file(s) under media/)"
 
 if (-not $NoEnable) {
     Write-Head "2. Enable in the New Game mod list"

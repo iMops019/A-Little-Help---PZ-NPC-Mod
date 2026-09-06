@@ -6,23 +6,31 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Fixed
-- **B42 was silently skipping the mod** - it wasn't in the mods list and got
-  stripped from `default.txt` at launch, so nothing loaded. Cause: no
-  `poster.png`. Every mod B42 lists ships one; the scanner ignores a local mod
-  folder without it. Added `poster.png` (256x256) + `icon.png`, referenced from
-  `mod.info`, and `deploy.ps1` now copies them and warns if the poster is gone.
+- **B42 was silently skipping the mod** - not in the Mods list, stripped from
+  `default.txt` at launch, nothing loaded. Two real causes, found by
+  disassembling `projectzomboid.jar`:
+  1. `ZomboidFileSystem.getAllModFoldersAux` only registers a folder in
+     `Zomboid/mods/` if it has `common/mod.info` or `<version>/mod.info`. Our
+     flat `media/` + root `mod.info` was invisible. **Moved everything under
+     `common/`.**
+  2. `mod.info` was LF-only (from `.gitattributes eol=lf`); PZ's line parser
+     produced no `id`. **Pinned `mod.info` to CRLF** in `.gitattributes`;
+     `deploy.ps1` re-forces CRLF on copy.
+- (The earlier `poster.png` guess was wrong - poster is cosmetic. Kept it anyway;
+  every real mod ships one.)
 
 ### Added
-- `poster.png`, `icon.png`; `mod.info` gains `poster=`, `icon=`, `modversion=`.
-- `deploy.ps1` now auto-enables the mod: inserts `mod = ALittleHelp,` into
+- `common/` wrapper; `poster.png` + `icon.png`; `mod.info` gains `poster=`,
+  `icon=`, `modversion=`.
+- `deploy.ps1` auto-enables the mod: inserts `mod = ALittleHelp,` into
   `Zomboid\mods\default.txt` (the New Game load-order list), idempotently.
   `-Saves latest|all` patches existing saves' `mods.txt`; `-Launch` starts the
   game (console build); `-NoEnable` skips the list edits.
 - `dev-deploy.bat` - double-click wrapper for `deploy.ps1`.
 
 ### Changed
-- `deploy.ps1` copies `media/` + `mod.info` + `poster.png` + `icon.png` (was
-  mirroring the whole folder with excludes).
+- Mod payload restructured `media/` -> `common/media/`; `deploy.ps1` mirrors
+  `common/` and writes CRLF `mod.info` to both `common/` and the deployed root.
 
 ## [0.1.0] - 2026-09-05
 

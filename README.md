@@ -34,12 +34,14 @@ comes later.
 
 ```
 A-Little-Help/
-  mod.info                 game-facing metadata
-  media/lua/client/
-    ALH_Keybinds.lua       registers the G keybind
-    ALH_Main.lua           ALH namespace, spawn stub, key handler, toggle
-    ALH_NPCMenu.lua        the ISCollapsableWindow UI
-    ALH_ContextMenu.lua    the "ALH NPC" right-click submenu
+  common/                  the entire mod payload
+    mod.info               metadata (id = ALittleHelp)
+    poster.png  icon.png
+    media/lua/client/
+      ALH_Keybinds.lua     registers the G keybind
+      ALH_Main.lua         ALH namespace, spawn stub, key handler, toggle
+      ALH_NPCMenu.lua      the ISCollapsableWindow UI
+      ALH_ContextMenu.lua  the "ALH NPC" right-click submenu
   docs/                    ARCHITECTURE.md, ROADMAP.md
   CHANGELOG.md
   deploy.ps1               dev: copy into the game + auto-enable
@@ -47,16 +49,17 @@ A-Little-Help/
   README.md
 ```
 
-Only `mod.info` + `media/` are the mod. Everything else is repo scaffolding and
-never reaches the game folder. Flat `media/` is fine on B42 42.20 - the bundled
-`examplemod` uses the same layout. Add `media/lua/server/` and
-`media/lua/shared/` later as needed. `docs/ARCHITECTURE.md` has the details.
+Only `common/` is the mod. Everything else is repo scaffolding and never reaches
+the game folder. **The `common/` wrapper is mandatory on B42**: the local-mod
+scanner only registers `Zomboid\mods\<x>\` if it finds `common/mod.info` (or
+`42/mod.info`) - a bare `mod.info` at the root is ignored. `docs/ARCHITECTURE.md`
+has the disassembly notes.
 
 ## Installing / testing
 
-There is no build step - "deploy" just copies `media/` + `mod.info` into the PZ
-user folder (`C:\Users\conov\Zomboid\mods\ALittleHelp\`). `deploy.ps1` also ticks
-the mod on and drops it into the load-order list the **New Game** screen reads
+There is no build step - "deploy" copies `common/` into the PZ user folder
+(`C:\Users\conov\Zomboid\mods\ALittleHelp\common\`). `deploy.ps1` also ticks the
+mod on and drops it into the load-order list the **New Game** screen reads
 (`Zomboid\mods\default.txt`), so you never re-tick anything by hand.
 
 ### Deploy
@@ -98,12 +101,19 @@ once).
 
 ## Gotchas learned the hard way
 
-- **A local mod with no `poster.png` is silently skipped by B42's scanner** - it
-  never appears in the Mods list and any manual `default.txt` entry for it gets
-  stripped at launch. Keep `poster.png` in the mod root.
+- **B42 only discovers a local mod with `common/mod.info` or `<version>/mod.info`.**
+  A flat `mods/<x>/mod.info` is invisible - no Mods-list entry, and its
+  `default.txt` line is stripped at launch, silently. Workshop mods are scanned
+  differently and escape this, which is misleading. (Source: disassembly of
+  `ZomboidFileSystem.getAllModFoldersAux`.)
+- **`mod.info` must be CRLF.** PZ reads it line by line; an LF-only file with a
+  `text=auto eol=lf` gitattributes parsed as one line -> no `id` -> rejected.
+  `.gitattributes` pins `mod.info` to CRLF and `deploy.ps1` re-forces it.
 - `Zomboid\mods\default.txt` is rewritten by the game from the Mods-screen state.
-  `deploy.ps1` keeps our line in it, but if it ever vanishes: launch, open
+  `deploy.ps1` keeps our line in it; if it ever vanishes, launch, open
   **Main Menu > Mods**, tick **A Little Help** once - then it persists.
+- The colored-box characters at char creation were **other mods** (VFE, damnlib,
+  More Car Features) failing to load `anims_X\Bob\...` on 42.20.4 - not this mod.
 
 ## Known gaps / next steps
 
