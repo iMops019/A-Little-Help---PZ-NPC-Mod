@@ -141,6 +141,22 @@ function ALH.goTo(rec, square)
     end
 end
 
+local AXE_TYPE = "Base.Axe"
+
+--- Give a helper an axe, in both hands (it's a two-handed weapon). Mirrors the
+--- Trailer2 scenario's way of arming a non-player character.
+function ALH.giveAxe(rec)
+    local z = rec.obj
+    if not z or z:isDead() then return end
+
+    local axe = z:getInventory():AddItem(AXE_TYPE)
+    z:setPrimaryHandItem(axe)
+    z:setSecondaryHandItem(axe)
+    z:resetEquippedHandsModels()
+    rec.armed = true
+    ALH.log("giveAxe: " .. tostring(rec.name))
+end
+
 --- "Follow me" - trail the player (onTick re-paths periodically).
 function ALH.follow(rec)
     if not rec.obj or rec.obj:isDead() then return end
@@ -256,7 +272,9 @@ end
 function ALH.selectNPC(rec)
     ALH.selected = rec
     ALH.openMenu()
-    if ALH.menu then ALH.menu:selectRec(rec) end
+    -- guard the method call: a window instance left over from before a hot-reload
+    -- may not have selectRec yet (selection still works via ALH.selected).
+    if ALH.menu and ALH.menu.selectRec then ALH.menu:selectRec(rec) end
 end
 
 -- G (rebindable) toggles the window.

@@ -5,7 +5,7 @@
       - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu
                               / "Send <selected> here" when a helper is selected
       - top-level "<name> (helper)" for each helper on the clicked tile
-        -> Come here / Follow me|Stay / Select / Send away.
+        -> Come here / Follow me|Stay / Give axe / Select / Send away.
 ]]
 
 ALH_ContextMenu = ALH_ContextMenu or {}
@@ -36,6 +36,10 @@ end
 
 function ALH_ContextMenu.onStay(worldobjects, rec)
     ALH.stay(rec)
+end
+
+function ALH_ContextMenu.onGiveAxe(worldobjects, rec)
+    ALH.giveAxe(rec)
 end
 
 function ALH_ContextMenu.onSendAway(worldobjects, rec)
@@ -96,6 +100,9 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
             hsub:addOption("Stay", worldobjects, ALH_ContextMenu.onStay, rec)
         else
             hsub:addOption("Follow me", worldobjects, ALH_ContextMenu.onFollow, rec)
+        end
+        if not rec.armed then
+            hsub:addOption("Give axe", worldobjects, ALH_ContextMenu.onGiveAxe, rec)
         end
         hsub:addOption("Select", worldobjects, ALH_ContextMenu.onSelectHelper, rec)
         hsub:addOption("Send away", worldobjects, ALH_ContextMenu.onSendAway, rec)

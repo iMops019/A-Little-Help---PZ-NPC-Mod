@@ -106,6 +106,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.orderTo(rec, square)` *(Main)* | core: `z:pathToLocation(square)` + stash `rec.orderTile` |
 | `ALH.comeHere(rec)` / `ALH.goTo(rec, square)` *(Main)* | orderTo + set `rec.order` to `"come"` / `"go"` |
 | `ALH.follow(rec)` / `ALH.stay(rec)` *(Main)* | `rec.order = "follow"` (OnTick re-paths) / clear order + `setPath2(nil)` |
+| `ALH.giveAxe(rec)` *(Main)* | `AddItem("Base.Axe")` + set primary & secondary hand item; `rec.armed = true` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -185,6 +186,14 @@ throttle). `stay` clears the order and `z:setPath2(nil)`. Movement runs through
 `PathFindBehavior2`, not `target`, so `z:setTarget(nil)` each tick (the tame)
 doesn't fight the walk. The list row shows `(coming)` / `(going)` /
 `(following)`.
+
+## Work (Phase D)
+
+`rec.armed` - the helper is carrying an axe (`ALH.giveAxe`: `AddItem("Base.Axe")`
++ `setPrimaryHandItem` / `setSecondaryHandItem`, both hands since it's a
+two-hander). Row shows `[axe]`. Next: command an armed helper to a tree and loop
+the chop animation (D-2), then a custom tree-HP counter + fell + RNG loot (D-3) -
+deliberately not vanilla `ISChopTreeAction` (player-fatigue-gated, fast fell).
 
 ## Spawning (Phase B)
 

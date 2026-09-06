@@ -6,6 +6,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Give axe** (`feat(work)`, D-1): helper right-click submenu gains **Give axe**
+  (until armed) -> `ALH.giveAxe(rec)` adds `Base.Axe` to its inventory and equips
+  it in both hands (`setPrimaryHandItem` + `setSecondaryHandItem`, per the
+  Trailer2 scenario's non-player equip). `rec.armed = true`; row shows `[axe]`.
+
+### Fixed
+- `ALH.selectNPC` guards the `selectRec` call - a window instance left from
+  before a hot-reload could lack the method and crash "Select".
+
+### Added
 - **Follow / Stay** (`feat(command)`, C-3): helper right-click submenu toggles
   **Follow me** <-> **Stay**. `ALH.follow` sets `rec.order = "follow"` and
   `OnTick` re-paths to the player every 800 ms while > 2 tiles away; `ALH.stay`
