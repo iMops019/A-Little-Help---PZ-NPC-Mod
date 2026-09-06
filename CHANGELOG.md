@@ -7,11 +7,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 - **Spawn a tamed-zombie helper** (`feat(spawn)`, B-1): Spawn NPC / *Spawn NPC
-  Here* creates an `IsoZombie` via `getVirtualZombieManager():createRealZombieNow`,
-  marks it (`ModData.alhTamed`), `setNoTeeth(true)`, and an `OnTick` hook clears
-  each helper's target so it won't chase. Records name from
-  `SurvivorFactory.CreateSurvivor`. Remove -> `removeFromWorld`. Lore: it's a
-  "kinda cured" infected - the horde ignores it because it still reads as
+  Here* calls `createZombie(x, y, z, nil, 0, IsoDirections.S)` (the B42
+  single-zombie global), marks it (`ModData.alhTamed`), `setNoTeeth(true)`, and
+  an `OnTick` hook clears each helper's target so it won't chase. Records a name
+  from `SurvivorFactory.CreateSurvivor`. Remove -> `removeFromWorld`. Lore: it's
+  a "kinda cured" infected - the horde ignores it because it still reads as
   infected. No appearance change or follow yet.
 - Rejected `IsoSurvivor` as the NPC class: dead code in B42 (constructor nulls
   the `final` `bodyDamage`, inherited `update()` NPEs on it every tick; `Say()`

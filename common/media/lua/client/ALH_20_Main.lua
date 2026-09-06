@@ -50,10 +50,12 @@ function ALH.spawnNPC(square)
     local sx, sy, sz = square:getX(), square:getY(), square:getZ()
     ALH.log(string.format("spawnNPC: creating tamed zombie at %d,%d,%d", sx, sy, sz))
 
-    local vzm = getVirtualZombieManager()
-    local z = vzm and vzm:createRealZombieNow(sx + 0.5, sy + 0.5, sz)
+    -- createZombie(x, y, z, SurvivorDesc|nil, outfit, IsoDirections) -> IsoZombie
+    -- The B42 single-zombie spawn (used by the base-game tutorial). Passing a
+    -- desc for appearance is a B-2 experiment; B-1 passes nil like the tutorial.
+    local z = createZombie(sx, sy, sz, nil, 0, IsoDirections.S)
     if not z then
-        ALH.log("spawnNPC: createRealZombieNow returned nil")
+        ALH.log("spawnNPC: createZombie returned nil")
         return nil
     end
     if not z:getSquare() then

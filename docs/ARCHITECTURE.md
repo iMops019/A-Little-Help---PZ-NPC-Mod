@@ -186,7 +186,10 @@ occupy world player slots - fragile).
 
 `ALH.spawnNPC(square)`:
 
-1. `getVirtualZombieManager():createRealZombieNow(x+0.5, y+0.5, z)` -> `IsoZombie`.
+1. `createZombie(x, y, z, nil, 0, IsoDirections.S)` -> `IsoZombie`. This is the
+   B42 single-zombie global (used by the base-game tutorial); it returns the
+   handle. (`getVirtualZombieManager()` from B41 no longer exists.) Passing a
+   `SurvivorDesc` as arg 4 for appearance is a B-2 experiment.
 2. Validate (`nil`, then `z:getSquare()` nil = bad tile - discard with
    `removeFromWorld`).
 3. `SurvivorFactory.CreateSurvivor()` + `randomName` for the display name
