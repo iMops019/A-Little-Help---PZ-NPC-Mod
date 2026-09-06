@@ -1,0 +1,9 @@
+# Normalize everything to LF in the repo
+* text=auto eol=lf
+
+# Windows-only helper stays CRLF on checkout
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.zip binary

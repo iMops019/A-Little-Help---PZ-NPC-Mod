@@ -1,0 +1,13 @@
+# OS cruft
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Local build/test artifacts (nothing generated yet, but just in case)
+/dist/
+*.zip

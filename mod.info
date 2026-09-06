@@ -1,0 +1,4 @@
+name=A Little Help
+id=ALittleHelp
+description=Dev helper. Press G for an in-game window with a Tracked NPCs list and Spawn/Remove/Refresh/Close buttons, plus an "ALH NPC" right-click submenu. Early WIP - nothing is actually spawned yet, this only wires up the UI and hooks.
+author=Joeconn
