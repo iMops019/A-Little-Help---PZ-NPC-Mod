@@ -95,11 +95,11 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.hookEvent(event, key, fn)` | attach an event handler; replaces the prior one for `key` (reload-safe) |
 | `ALH.devReload()` | re-run every ALH lua file; `-debug` only; closes+reopens the window |
 | `ALH._eventHandlers` | `key -> {event, fn}` registry backing `hookEvent` |
-| `ALH.npcs` *(Main)* | array of stub tables `{ id, name, x, y, z }` - the model |
+| `ALH.npcs` *(Main)* | array of records `{ id, name, desc, obj, x, y, z }` - the model |
 | `ALH.menu` *(Main)* | the live `ALH_NPCMenu` instance, or `nil` when closed |
 | `ALH.windowRect` *(Main)* | `{x,y,w,h}` of the window's last position, or `nil` for a centred default |
-| `ALH.spawnNPC(square)` *(Main)* | append a stub (no world actor yet); refreshes the menu |
-| `ALH.removeNPC(stub)` *(Main)* | drop a stub; refreshes the menu |
+| `ALH.spawnNPC(square)` *(Main)* | spawn a real `IsoSurvivor`, add a record; refreshes the menu |
+| `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()`, drop the record; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
@@ -143,6 +143,35 @@ test)`. Adds one top-level `ALH NPC` option carrying a submenu. Context callback
 are invoked by the engine as `fn(option.target, param1, param2, ...)` - that is
 why `onSpawnHere(worldobjects, player, square)` is ordered the way it is
 (`target` = `worldobjects`, then the params passed to `addOption`).
+
+## Spawning (Phase B)
+
+The list is a **live roster** (Model B): a row is an NPC that exists in the world
+right now. One "Spawn NPC" button; the generate/instantiate seam lives in the
+code, not the UI (a two-button "Generate then Spawn" flow only earns its place if
+NPC generation becomes a previewed choice - traits, outfit - which is a later
+feature).
+
+`ALH.spawnNPC(square)`:
+
+1. `SurvivorFactory.CreateSurvivor()` -> `SurvivorDesc` (data: body, clothes),
+   then `SurvivorFactory.randomName(desc)`.
+2. `SurvivorFactory.InstansiateInCell(desc, cell, x, y, z)` -> `IsoSurvivor`.
+   This only *constructs* it (verified by disassembly - it's `new IsoSurvivor`
+   plus `desc:setInstance`); it does **not** add it to the world.
+3. Guard against a half-built actor (`npc:getSquare()` nil - the constructor bails
+   on a bad tile / id clash, same as the animal spawners).
+4. `cell:addMovingObject(npc)` to put it in the update/render set, then
+   `setX/Y/Z` + `setCurrent(square)` to pin it.
+5. `npc:Say("Hello, I'm ready to work!")`, record `{ desc, obj, ... }`.
+
+`ALH.removeNPC(rec)` calls `rec.obj:removeFromWorld()` -
+`IsoSurvivor:Despawn()` only nils the `desc` link, it does not remove the actor.
+
+B-1 is exploratory - `InstansiateInCell` is dead code in the base game - so
+`spawnNPC` logs every step. Open questions it answers by observation: does the
+survivor render / stand / T-pose, does anything drive its AI, do zombies attack
+it on sight. Those drive B-2 (emote) and Phase C (faction / follow).
 
 ## Adding a feature - checklist
 

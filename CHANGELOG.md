@@ -6,6 +6,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Real NPC spawn** (`feat(spawn)`, B-1): Spawn NPC / right-click *Spawn NPC
+  Here* now creates an actual `IsoSurvivor` at the tile
+  (`SurvivorFactory.CreateSurvivor` + `InstansiateInCell` + `cell:addMovingObject`),
+  says "Hello, I'm ready to work!", and records the live actor + its
+  `SurvivorDesc`. Remove takes the actor out of the world (`removeFromWorld`).
+  Exploratory - `InstansiateInCell` is unused by the base game, so `spawnNPC`
+  logs each step. No AI, no faction, no persistence yet.
 - **ESC closes the window** (`feat(ui)`): when the helper window is open, ESC
   closes it and is consumed, so it doesn't also open the pause menu; a second ESC
   does. Standard vanilla build/craft/map behaviour.
