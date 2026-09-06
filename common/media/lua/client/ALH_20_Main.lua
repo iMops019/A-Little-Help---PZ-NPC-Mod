@@ -1,22 +1,17 @@
 --[[
-    A Little Help - core namespace, "spawn" stub, and key handling.
-    Build 42, client-side only for now.
+    A Little Help  --  helper-window control + keybind handling.
+
+    The `ALH` namespace, constants, ALH.log and ALH.hookEvent live in
+    ALH_00_Core.lua. This file owns opening/closing the window, the NPC list
+    model, and the G keypress.
 ]]
 
-ALH = ALH or {}
-ALH.VERSION = "0.1.0"
-ALH.KEYBIND_NAME = "ALH: Toggle helper menu"
-
--- The list the UI shows. Nothing real lives here yet - Spawn NPC just
--- appends a placeholder so the window and list box have something to display.
+-- Tracked NPCs. Placeholders in this version: Spawn NPC appends a stub so the
+-- window and list box have something to show. Real actors arrive in v0.2.
 ALH.npcs = ALH.npcs or {}
 
-function ALH.log(msg)
-    print("[A Little Help] " .. tostring(msg))
-end
-
---- Add a placeholder "NPC". No actor is created in the world yet.
---- @param square IsoGridSquare|nil  where the stub should be pinned (defaults to the player's square)
+--- Append a placeholder NPC. No world actor is created yet.
+--- @param square IsoGridSquare|nil  tile to pin it to (default: the player's)
 --- @return table  the stub that was added
 function ALH.spawnNPC(square)
     local player = getPlayer()
@@ -32,7 +27,7 @@ function ALH.spawnNPC(square)
     }
     table.insert(ALH.npcs, stub)
 
-    ALH.log(string.format("stubbed '%s' at %d,%d,%d  (no actor spawned - WIP)",
+    ALH.log(string.format("stubbed '%s' at %d,%d,%d (no actor spawned - WIP)",
         stub.name, stub.x, stub.y, stub.z))
     if player then
         player:setHaloNote("A Little Help: stubbed " .. stub.name)
@@ -52,18 +47,15 @@ function ALH.removeNPC(stub)
     if ALH.menu then ALH.menu:refreshList() end
 end
 
---- Toggle the helper window open/closed.
-function ALH.toggleMenu()
+--- Open the helper window, unless it is already open.
+function ALH.openMenu()
+    if ALH.menu then return end
     if not getPlayer() then return end
-
-    if ALH.menu then
-        ALH.menu:close()   -- ALH_NPCMenu:close() sets ALH.menu back to nil
-        return
-    end
 
     local w, h = 340, 400
     local x = (getCore():getScreenWidth() - w) / 2
     local y = (getCore():getScreenHeight() - h) / 2
+
     ALH.menu = ALH_NPCMenu:new(x, y, w, h)
     ALH.menu:initialise()
     ALH.menu:addToUIManager()
@@ -71,9 +63,19 @@ function ALH.toggleMenu()
     ALH.log("menu opened")
 end
 
--- Key handling. Prefer the rebindable keybind; fall back to a hard G if the
--- keybind table wasn't available at load time for some reason.
-local function ALH_onKeyPressed(key)
+--- Close the helper window, if it is open. ALH_NPCMenu:close() clears ALH.menu.
+function ALH.closeMenu()
+    if ALH.menu then ALH.menu:close() end
+end
+
+--- Toggle the helper window.
+function ALH.toggleMenu()
+    if ALH.menu then ALH.closeMenu() else ALH.openMenu() end
+end
+
+-- G (rebindable) toggles the window. Falls back to a hard G if the keybind
+-- table wasn't ready at startup for some reason.
+local function onKeyPressed(key)
     if not getPlayer() then return end
 
     local bound = getCore():getKey(ALH.KEYBIND_NAME)
@@ -84,6 +86,6 @@ local function ALH_onKeyPressed(key)
     end
 end
 
-Events.OnKeyPressed.Add(ALH_onKeyPressed)
+ALH.hookEvent("OnKeyPressed", "main.keyPressed", onKeyPressed)
 
-ALH.log("loaded v" .. ALH.VERSION)
+ALH.log("main ready")

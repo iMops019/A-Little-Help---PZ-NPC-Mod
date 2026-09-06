@@ -17,13 +17,15 @@
     Usage:
       powershell -ExecutionPolicy Bypass -File deploy.ps1
       powershell -ExecutionPolicy Bypass -File deploy.ps1 -Saves latest
-      powershell -ExecutionPolicy Bypass -File deploy.ps1 -Launch
+      powershell -ExecutionPolicy Bypass -File deploy.ps1 -Launch -Debug
       powershell -ExecutionPolicy Bypass -File deploy.ps1 -NoEnable
 
     Params:
       -Saves  none|latest|all   also add the mod to existing saves' mods.txt
                                 (default: none - use a New Game to test)
       -Launch                    start Project Zomboid (console build) afterwards
+      -Debug                     with -Launch, pass -debug (enables the in-game
+                                 "Reload ALH lua" button and the debug menu)
       -NoEnable                  copy files only, don't touch any mod list
 #>
 
@@ -31,6 +33,7 @@ param(
     [ValidateSet('none', 'latest', 'all')]
     [string]$Saves = 'none',
     [switch]$Launch,
+    [switch]$Debug,
     [switch]$NoEnable
 )
 
@@ -148,9 +151,14 @@ Next:
 "@
 
 if ($Launch) {
-    Write-Head "Launching Project Zomboid (console build)..."
-    if (Test-Path $pzBat) { Start-Process -FilePath $pzBat -WorkingDirectory (Split-Path $pzBat) }
-    else { Start-Process 'steam://rungameid/108600' }
+    $pzArgs = if ($Debug) { @('-debug') } else { @() }
+    Write-Head ("Launching Project Zomboid{0}..." -f $(if ($Debug) { ' (-debug)' } else { '' }))
+    if (Test-Path $pzBat) {
+        Start-Process -FilePath $pzBat -WorkingDirectory (Split-Path $pzBat) -ArgumentList $pzArgs
+    } else {
+        Start-Process 'steam://rungameid/108600'
+        if ($Debug) { Write-Host "  (Steam launch can't pass -debug - set '-debug' in Steam > Properties > Launch Options)" -ForegroundColor DarkYellow }
+    }
 }
 
 exit 0

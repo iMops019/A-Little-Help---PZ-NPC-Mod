@@ -5,6 +5,23 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Hot reload** (`feat(core)`): `-debug` sessions get a "Reload ALH lua (dev)"
+  button in the window that re-runs every ALH file via `reloadLuaFile` - no game
+  restart. New `ALH_00_Core.lua` owns the namespace, `ALH.log`, `ALH.hookEvent`
+  (reload-safe event registration), and `ALH.devReload`.
+- `deploy.ps1 -Debug` launches PZ with `-debug`.
+- `docs/ENGINEERING.md` - working method (small vertical slices), Definition of
+  Done, PZ modding reference, code standards, hot-reload contract.
+
+### Changed
+- Client lua files renamed with `_NN_` load-order prefixes
+  (`ALH_00_Core` … `ALH_40_ContextMenu`) so Core is guaranteed to load first.
+- `Main` / `ContextMenu` / `Keybinds` refactored to be idempotent (safe to
+  re-execute): event handlers go through `ALH.hookEvent`, keybind rows are
+  dupe-guarded. `ALH.toggleMenu` split into `openMenu` / `closeMenu` /
+  `toggleMenu`.
+
 ### Fixed
 - **B42 was silently skipping the mod** - not in the Mods list, stripped from
   `default.txt` at launch, nothing loaded. Two real causes, found by

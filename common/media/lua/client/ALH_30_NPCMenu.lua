@@ -1,7 +1,12 @@
 --[[
-    A Little Help - the helper window.
-    A draggable, resizable ISCollapsableWindow with a Tracked NPCs list and a
-    row of buttons. None of the buttons do anything in the world yet.
+    A Little Help  --  the helper window.
+
+    A draggable, resizable ISCollapsableWindow: a Tracked NPCs list and rows of
+    buttons. The buttons don't touch the world yet (v0.1). In -debug sessions an
+    extra "Reload ALH lua" button hot-reloads the mod (see ALH.devReload).
+
+    View only: this widget reads ALH.npcs and calls ALH.* actions. It holds no
+    domain state of its own.
 ]]
 
 require "ISUI/ISCollapsableWindow"
@@ -38,9 +43,11 @@ function ALH_NPCMenu:createChildren()
     self:addChild(self.header)
     y = y + 24
 
-    -- List box: two rows of buttons live below it, so reserve that space.
-    local reserved  = (BTN_H + PAD) * 2
-    local listH     = math.max(60, self.height - y - PAD - reserved)
+    -- List box. Reserve space for the button rows below it (a 3rd dev row
+    -- exists only in -debug sessions).
+    local buttonRows = getDebug() and 3 or 2
+    local reserved   = (BTN_H + PAD) * buttonRows
+    local listH      = math.max(60, self.height - y - PAD - reserved)
 
     self.npcList = ISScrollingListBox:new(x, y, w, listH)
     self.npcList:initialise()
@@ -86,6 +93,17 @@ function ALH_NPCMenu:createChildren()
     self.closeBtn2:instantiate()
     self.closeBtn2:enableCancelColor()
     self:addChild(self.closeBtn2)
+
+    -- Row 3 (dev only): hot-reload every ALH lua file, no game restart.
+    if getDebug() then
+        y = y + BTN_H + PAD
+        self.reloadBtn = ISButton:new(x, y, w, BTN_H, "Reload ALH lua (dev)", self, ALH_NPCMenu.onButton)
+        self.reloadBtn.internal = "DEVRELOAD"
+        self.reloadBtn:initialise()
+        self.reloadBtn:instantiate()
+        self.reloadBtn:setTooltip("Re-runs every A Little Help lua file. Run deploy.ps1 first.")
+        self:addChild(self.reloadBtn)
+    end
 end
 
 --- Rebuild the list box from ALH.npcs.
@@ -132,6 +150,9 @@ function ALH_NPCMenu:onButton(button)
 
     elseif id == "CLOSE" then
         self:close()
+
+    elseif id == "DEVRELOAD" then
+        ALH.devReload()   -- closes and reopens this window with fresh code
     end
 end
 

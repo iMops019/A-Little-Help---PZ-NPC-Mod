@@ -37,11 +37,12 @@ A-Little-Help/
   common/                  the entire mod payload
     mod.info               metadata (id = ALittleHelp)
     poster.png  icon.png
-    media/lua/client/
-      ALH_Keybinds.lua     registers the G keybind
-      ALH_Main.lua         ALH namespace, spawn stub, key handler, toggle
-      ALH_NPCMenu.lua      the ISCollapsableWindow UI
-      ALH_ContextMenu.lua  the "ALH NPC" right-click submenu
+    media/lua/client/           (files load in _NN_ order)
+      ALH_00_Core.lua          namespace, log, hookEvent, devReload
+      ALH_10_Keybinds.lua      registers the G keybind
+      ALH_20_Main.lua          NPC-list model, window control, G key
+      ALH_30_NPCMenu.lua       the ISCollapsableWindow UI
+      ALH_40_ContextMenu.lua   the "ALH NPC" right-click submenu
   docs/                    ARCHITECTURE.md, ROADMAP.md
   CHANGELOG.md
   deploy.ps1               dev: copy into the game + auto-enable

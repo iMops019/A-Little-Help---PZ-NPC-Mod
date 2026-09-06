@@ -1,27 +1,27 @@
 --[[
-    A Little Help - world right-click menu.
-    Adds a top-level "ALH NPC" entry with a small submenu. Behaves like any
-    other vanilla right-click option.
+    A Little Help  --  world right-click menu.
+
+    Adds a top-level "ALH NPC" entry with a small submenu, exactly like a vanilla
+    right-click option.
 ]]
 
 ALH_ContextMenu = ALH_ContextMenu or {}
-
-function ALH_ContextMenu.onOpenMenu()
-    ALH.toggleMenu()
-end
 
 function ALH_ContextMenu.onSpawnHere(worldobjects, player, square)
     ALH.spawnNPC(square)
 end
 
+function ALH_ContextMenu.onOpenMenu()
+    ALH.openMenu()
+end
+
 local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, test)
     if test then return true end
-    if not ALH then return end
 
     local player = getSpecificPlayer(playerIndex)
     if not player then return end
 
-    -- Best guess at the square the player clicked on.
+    -- Best guess at the tile the player clicked on.
     local square = (worldobjects[1] and worldobjects[1]:getSquare())
         or player:getCurrentSquare()
 
@@ -36,4 +36,4 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
     info.notAvailable = true
 end
 
-Events.OnFillWorldObjectContextMenu.Add(onFillWorldObjectContextMenu)
+ALH.hookEvent("OnFillWorldObjectContextMenu", "contextMenu.fill", onFillWorldObjectContextMenu)

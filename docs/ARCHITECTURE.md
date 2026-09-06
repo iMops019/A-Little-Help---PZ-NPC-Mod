@@ -20,11 +20,12 @@ A-Little-Help/
     poster.png  icon.png
     media/
       lua/
-        client/                  loaded on the client only (this whole mod)
-          ALH_Keybinds.lua
-          ALH_Main.lua
-          ALH_NPCMenu.lua
-          ALH_ContextMenu.lua
+        client/                     loaded on the client only (this whole mod)
+          ALH_00_Core.lua           namespace, log, hookEvent, devReload
+          ALH_10_Keybinds.lua       Options > Key Bindings rows
+          ALH_20_Main.lua           NPC-list model, window control, G key
+          ALH_30_NPCMenu.lua        the ISCollapsableWindow
+          ALH_40_ContextMenu.lua    the "ALH NPC" right-click submenu
       scripts/   (future)        item / recipe / vehicle definitions
   deploy.ps1                     dev: copy into the game + auto-enable
   dev-deploy.bat                 double-click wrapper for deploy.ps1
@@ -59,49 +60,64 @@ to run authoritatively (multiplayer, or anything the server should own) it goes 
 
 ### Load order
 
-Within a folder the game loads files **alphabetically**, so:
+The game loads a context's files **alphabetically**, so ALH files carry a
+`_NN_` load-order prefix:
 
-1. `ALH_ContextMenu.lua` - defines `ALH_ContextMenu.*`, registers the
-   `OnFillWorldObjectContextMenu` handler. Handler body runs later, by which
-   point `ALH` exists.
-2. `ALH_Keybinds.lua` - pushes two rows onto the global `keyBinding` table.
-3. `ALH_Main.lua` - creates the `ALH` table and everything on it, registers the
-   `OnKeyPressed` handler.
-4. `ALH_NPCMenu.lua` - defines the `ALH_NPCMenu` window class.
+1. `ALH_00_Core.lua` - the `ALH` namespace, constants, `ALH.log`,
+   `ALH.hookEvent`, `ALH.devReload`. **Must be first** - everything else calls
+   `ALH.hookEvent` at load time.
+2. `ALH_10_Keybinds.lua` - adds rows to the global `keyBinding` table
+   (dupe-guarded). Reads `ALH.KEYBIND_NAME`.
+3. `ALH_20_Main.lua` - the NPC-list model and window open/close/toggle; hooks
+   `OnKeyPressed`. Reads `ALH.*` from Core.
+4. `ALH_30_NPCMenu.lua` - defines the `ALH_NPCMenu` window class.
+5. `ALH_40_ContextMenu.lua` - hooks `OnFillWorldObjectContextMenu`.
 
-Nothing touches another file's symbols at *load* time, only at *event* time, so
-the order is safe. If you add a file that must load first, prefix it (e.g.
-`ALH_00_Config.lua`).
+At *load* time a file only touches `ALH.*` that `ALH_00_Core` has already
+defined; everything domain-specific is deferred to event time.
 
-## The `ALH` namespace (`ALH_Main.lua`)
+New files: pick a prefix that places them correctly (leave gaps - 10, 20, 30 -
+so there's room to insert). Anything that must run before Core would also need
+its own `ALH = ALH or {}` guard, but don't do that - keep Core first.
+
+See `docs/ENGINEERING.md` section 6 for why every file must survive
+re-execution.
+
+## The `ALH` namespace
+
+Defined in `ALH_00_Core.lua` unless noted.
 
 | Symbol | Purpose |
 | --- | --- |
-| `ALH.VERSION` | string, keep in sync with `CHANGELOG.md` |
-| `ALH.KEYBIND_NAME` | must equal the `value` string in `ALH_Keybinds.lua` |
-| `ALH.npcs` | array of stub tables `{ id, name, x, y, z }` - the model |
-| `ALH.menu` | the live `ALH_NPCMenu` instance, or `nil` when closed |
+| `ALH.ID` / `ALH.VERSION` | mod id; version string, kept in sync with `CHANGELOG.md` |
+| `ALH.KEYBIND_NAME` | must equal the `value` string in `ALH_10_Keybinds.lua` |
 | `ALH.log(msg)` | `print()` with an `[A Little Help]` prefix -> `console.txt` |
-| `ALH.spawnNPC(square)` | append a stub (no world actor yet); refreshes the menu |
-| `ALH.removeNPC(stub)` | drop a stub; refreshes the menu |
-| `ALH.toggleMenu()` | open the window, or close it if already open |
+| `ALH.hookEvent(event, key, fn)` | attach an event handler; replaces the prior one for `key` (reload-safe) |
+| `ALH.devReload()` | re-run every ALH lua file; `-debug` only; closes+reopens the window |
+| `ALH._eventHandlers` | `key -> fn` registry backing `hookEvent` |
+| `ALH.npcs` *(Main)* | array of stub tables `{ id, name, x, y, z }` - the model |
+| `ALH.menu` *(Main)* | the live `ALH_NPCMenu` instance, or `nil` when closed |
+| `ALH.spawnNPC(square)` *(Main)* | append a stub (no world actor yet); refreshes the menu |
+| `ALH.removeNPC(stub)` *(Main)* | drop a stub; refreshes the menu |
+| `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
 holds NPC state, it rebuilds its list box from `ALH.npcs` in `refreshList()`.
 
-## The window (`ALH_NPCMenu.lua`)
+## The window (`ALH_30_NPCMenu.lua`)
 
 - Derives `ISCollapsableWindow` (gives the title bar, drag, collapse, resize, X).
-- `createChildren()` builds the header label, the list box, and two rows of
-  buttons. It runs automatically the first time the window is added to the UI
-  manager (`addToUIManager` -> `instantiate` -> `createChildren`).
+- `createChildren()` builds the header label, the list box, and the button rows.
+  It runs automatically the first time the window is added to the UI manager
+  (`addToUIManager` -> `instantiate` -> `createChildren`). The list box height
+  reserves space for the button rows, including the `-debug`-only third row.
 - Buttons are dispatched by a string tag: each button gets `btn.internal =
-  "SPAWN" | "REMOVE" | "REFRESH" | "CLOSE"`, and `onButton(btn)` switches on it.
-  Add a button = add a tag + a branch.
+  "SPAWN" | "REMOVE" | "REFRESH" | "CLOSE" | "DEVRELOAD"`, and `onButton(btn)`
+  switches on it. Add a button = add a tag + a branch.
 - `close()` is overridden to also `removeFromUIManager()` and null out
   `ALH.menu`, so the next `G` press builds a fresh instance (no stale state).
 
-## The right-click menu (`ALH_ContextMenu.lua`)
+## The right-click menu (`ALH_40_ContextMenu.lua`)
 
 Hooks `Events.OnFillWorldObjectContextMenu(playerIndex, context, worldobjects,
 test)`. Adds one top-level `ALH NPC` option carrying a submenu. Context callbacks
