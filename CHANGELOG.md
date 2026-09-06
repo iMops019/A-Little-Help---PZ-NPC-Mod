@@ -5,7 +5,15 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+- **B42 was silently skipping the mod** - it wasn't in the mods list and got
+  stripped from `default.txt` at launch, so nothing loaded. Cause: no
+  `poster.png`. Every mod B42 lists ships one; the scanner ignores a local mod
+  folder without it. Added `poster.png` (256x256) + `icon.png`, referenced from
+  `mod.info`, and `deploy.ps1` now copies them and warns if the poster is gone.
+
 ### Added
+- `poster.png`, `icon.png`; `mod.info` gains `poster=`, `icon=`, `modversion=`.
 - `deploy.ps1` now auto-enables the mod: inserts `mod = ALittleHelp,` into
   `Zomboid\mods\default.txt` (the New Game load-order list), idempotently.
   `-Saves latest|all` patches existing saves' `mods.txt`; `-Launch` starts the
@@ -13,8 +21,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 - `dev-deploy.bat` - double-click wrapper for `deploy.ps1`.
 
 ### Changed
-- `deploy.ps1` copies only `media/` + `mod.info` (was mirroring the whole folder
-  with excludes).
+- `deploy.ps1` copies `media/` + `mod.info` + `poster.png` + `icon.png` (was
+  mirroring the whole folder with excludes).
 
 ## [0.1.0] - 2026-09-05
 

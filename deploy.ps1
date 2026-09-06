@@ -89,9 +89,16 @@ Write-Head "1. Copy mod -> $modDst"
 New-Item -ItemType Directory -Force -Path $modDst | Out-Null
 robocopy "$src\media" "$modDst\media" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed (exit $LASTEXITCODE)" }
-Copy-Item "$src\mod.info" "$modDst\mod.info" -Force
+
+# mod.info + root assets (poster.png is REQUIRED - B42 won't list the mod without it)
+foreach ($f in 'mod.info', 'poster.png', 'icon.png') {
+    if (Test-Path "$src\$f") { Copy-Item "$src\$f" "$modDst\$f" -Force }
+}
+if (-not (Test-Path "$modDst\poster.png")) {
+    Write-Host "  ! poster.png missing - B42 will silently skip the mod" -ForegroundColor Red
+}
 $fileCount = (Get-ChildItem "$modDst\media" -Recurse -File).Count
-Write-Host "  copied mod.info + $fileCount file(s) under media/"
+Write-Host "  copied mod.info + poster + $fileCount file(s) under media/"
 
 if (-not $NoEnable) {
     Write-Head "2. Enable in the New Game mod list"

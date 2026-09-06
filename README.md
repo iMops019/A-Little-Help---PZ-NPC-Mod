@@ -96,9 +96,17 @@ once).
 - Launch PZ with `-debug` for the in-game debug menu (`Reload Lua`, spawn tools).
 - Lua errors also surface as a red box in-game.
 
+## Gotchas learned the hard way
+
+- **A local mod with no `poster.png` is silently skipped by B42's scanner** - it
+  never appears in the Mods list and any manual `default.txt` entry for it gets
+  stripped at launch. Keep `poster.png` in the mod root.
+- `Zomboid\mods\default.txt` is rewritten by the game from the Mods-screen state.
+  `deploy.ps1` keeps our line in it, but if it ever vanishes: launch, open
+  **Main Menu > Mods**, tick **A Little Help** once - then it persists.
+
 ## Known gaps / next steps
 
 - Pressing `G` while typing in chat still toggles the menu (no focus guard yet)
 - No real NPC actor, pathing, or persistence
-- No `poster.png` yet (mod shows without an image in the Mods menu)
 - Single-player only; multiplayer `G` is the vanilla voice-chat key
