@@ -130,7 +130,9 @@ function ALH_NPCMenu:rowText(rec)
     end
     local player = getPlayer()
     local dist   = player and (math.floor(player:DistTo(z)) .. " tiles") or "?"
-    local order  = (rec.order == "come") and "  (coming)" or ""
+    local order  = ""
+    if rec.order == "come" then order = "  (coming)"
+    elseif rec.order == "go" then order = "  (going)" end
     return string.format("%s  --  %s%s", rec.name or "Helper", dist, order)
 end
 
@@ -157,7 +159,8 @@ function ALH_NPCMenu:refreshList()
 end
 
 --- Refresh each row's text from live data without rebuilding the list, so
---- selection and scroll position are kept.
+--- selection and scroll position are kept. Also mirrors the list selection into
+--- ALH.selected so ground commands ("Send X here") know the target.
 function ALH_NPCMenu:updateRows()
     if not self.npcList then return end
     for _, row in ipairs(self.npcList.items) do
@@ -165,6 +168,7 @@ function ALH_NPCMenu:updateRows()
             row.text = self:rowText(row.item)
         end
     end
+    ALH.selected = self:getSelectedNPC()
 end
 
 function ALH_NPCMenu:prerender()

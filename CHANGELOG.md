@@ -6,6 +6,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **"Send helper here" command** (`feat(command)`, C-2): right-click the ground
+  while a helper is selected -> "Send `<name>` here" -> `ALH.goTo(rec, square)`
+  paths it to that tile. `ALH.selected` (set by right-click *Select*, mirrored
+  from the window's list selection) is the command target. `comeHere`/`goTo`
+  now share `ALH.orderTo`; row shows `(going)`; the order clears on arrival.
 - **"Come here" command** (`feat(command)`, C-1): the helper right-click submenu
   gains **Come here** -> `ALH.comeHere(rec)` calls `z:pathToLocation(playerSquare)`
   (the debug menu's "Walk Here" recipe; `PathFindBehavior2`-driven, so the

@@ -1,8 +1,9 @@
 --[[
     A Little Help  --  world right-click menu.
 
-    Two things, both plain vanilla-style context options:
+    Plain vanilla-style context options:
       - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu
+                              / "Send <selected> here" when a helper is selected
       - top-level "<name> (helper)" for each helper on the clicked tile
         -> Come here / Select / Send away. The spine commands hang off.
 ]]
@@ -23,6 +24,10 @@ end
 
 function ALH_ContextMenu.onComeHere(worldobjects, rec)
     ALH.comeHere(rec)
+end
+
+function ALH_ContextMenu.onGoHere(worldobjects, player, square)
+    if ALH.selected then ALH.goTo(ALH.selected, square) end
 end
 
 function ALH_ContextMenu.onSendAway(worldobjects, rec)
@@ -62,6 +67,13 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
 
     sub:addOption("Spawn NPC Here", worldobjects, ALH_ContextMenu.onSpawnHere, player, square)
     sub:addOption("Open Helper Menu (G)", worldobjects, ALH_ContextMenu.onOpenMenu)
+
+    -- Send the selected helper to this tile.
+    local sel = ALH.selected
+    if sel and sel.obj and not sel.obj:isDead() then
+        sub:addOption("Send " .. (sel.name or "helper") .. " here",
+            worldobjects, ALH_ContextMenu.onGoHere, player, square)
+    end
 
     local info = sub:addOption("Helpers: " .. tostring(#ALH.npcs), worldobjects, nil)
     info.notAvailable = true

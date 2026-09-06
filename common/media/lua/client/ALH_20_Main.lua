@@ -90,6 +90,10 @@ function ALH.spawnNPC(square)
     return rec
 end
 
+-- The helper the player is commanding (a record in ALH.npcs, or nil). Set by
+-- right-click "Select" and by clicking a row; the window keeps it in sync.
+ALH.selected = ALH.selected or nil
+
 --- Remove an NPC: take its actor out of the world, then drop the record.
 function ALH.removeNPC(rec)
     if rec.obj then
@@ -100,38 +104,67 @@ function ALH.removeNPC(rec)
             table.remove(ALH.npcs, i)
         end
     end
+    if ALH.selected == rec then ALH.selected = nil end
     ALH.log("removeNPC: removed " .. tostring(rec.name))
     if ALH.menu then ALH.menu:refreshList() end
 end
 
---- Command a helper to walk to the player. Mirrors the debug menu's
---- "Selected: Walk Here". `pathToLocation` drives PathFindBehavior2, which is
---- independent of `target`, so the per-tick target-clear below won't cancel it.
-function ALH.comeHere(rec)
+--- Send a helper walking to `square`. `pathToLocation` drives PathFindBehavior2,
+--- which is independent of `target`, so the per-tick target-clear won't cancel
+--- it. (This is the debug menu's "Selected: Walk Here" recipe.)
+--- @param rec table            a record in ALH.npcs
+--- @param square IsoGridSquare destination tile
+function ALH.orderTo(rec, square)
     local z = rec.obj
-    local player = getPlayer()
-    if not z or z:isDead() or not player then return end
+    if not z or z:isDead() or not square then return end
 
-    local sq = player:getCurrentSquare()
-    if not sq then return end
-
-    z:pathToLocation(sq:getX(), sq:getY(), sq:getZ())
-    rec.order = "come"
-    ALH.log("comeHere: " .. tostring(rec.name) .. " -> player")
+    z:pathToLocation(square:getX(), square:getY(), square:getZ())
+    rec.orderTile = { square:getX(), square:getY(), square:getZ() }
+    return true
 end
 
--- Per-tick roster maintenance: keep helpers from chasing anything, and drop the
--- "come" order once they've arrived. Driven off OnTick (once per tick over our
--- small roster), not OnZombieUpdate (fires for every zombie in the world).
+--- "Come here" - walk to the player's tile.
+function ALH.comeHere(rec)
+    local player = getPlayer()
+    if player and ALH.orderTo(rec, player:getCurrentSquare()) then
+        rec.order = "come"
+        ALH.log("comeHere: " .. tostring(rec.name))
+    end
+end
+
+--- "Go here" - walk to a specific tile.
+function ALH.goTo(rec, square)
+    if ALH.orderTo(rec, square) then
+        rec.order = "go"
+        ALH.log(string.format("goTo: %s -> %d,%d", tostring(rec.name),
+            square:getX(), square:getY()))
+    end
+end
+
+--- How close (squared tile distance) counts as "arrived" for each order.
+local ARRIVED = { come = 4, go = 2 }
+
+-- Per-tick roster maintenance: keep helpers from chasing anything, and drop a
+-- standing order once the helper has arrived. Driven off OnTick (once per tick
+-- over our small roster), not OnZombieUpdate (every zombie in the world).
 local function onTick()
     local player = getPlayer()
     for _, rec in ipairs(ALH.npcs) do
         local z = rec.obj
         if z and not z:isDead() then
             if z:getTarget() then z:setTarget(nil) end
-            if rec.order == "come" and player
-                and z:DistToSquared(player:getX(), player:getY()) < 4 then
-                rec.order = nil   -- within ~2 tiles: arrived
+
+            local goal = ARRIVED[rec.order]
+            if goal then
+                local tx, ty
+                if rec.order == "come" then
+                    tx, ty = player and player:getX(), player and player:getY()
+                elseif rec.orderTile then
+                    tx, ty = rec.orderTile[1] + 0.5, rec.orderTile[2] + 0.5
+                end
+                if tx and z:DistToSquared(tx, ty) < goal then
+                    rec.order, rec.orderTile = nil, nil
+                end
             end
         end
     end
@@ -164,6 +197,7 @@ function ALH.openMenu()
     end
 
     ALH.menu:refreshList()
+    if ALH.selected then ALH.menu:selectRec(ALH.selected) end
     ALH.log("menu opened")
 end
 
@@ -191,8 +225,9 @@ function ALH.toggleMenu()
     if ALH.menu then ALH.closeMenu() else ALH.openMenu() end
 end
 
---- Open the window and select this helper's row (used by the right-click menu).
+--- Make `rec` the commanded helper, and open the window on its row.
 function ALH.selectNPC(rec)
+    ALH.selected = rec
     ALH.openMenu()
     if ALH.menu then ALH.menu:selectRec(rec) end
 end

@@ -101,8 +101,10 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.spawnNPC(square)` *(Main)* | spawn a tamed-zombie helper (`createRealZombieNow` + `setNoTeeth` + marker), add a record |
 | `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()`, drop the record; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
-| `ALH.selectNPC(rec)` *(Main)* | open the window and select `rec`'s row (right-click "Select") |
-| `ALH.comeHere(rec)` *(Main)* | walk the helper to the player (`z:pathToLocation`); sets `rec.order = "come"` |
+| `ALH.selected` *(Main)* | the commanded helper record, or `nil` |
+| `ALH.selectNPC(rec)` *(Main)* | set `ALH.selected`, open the window on its row |
+| `ALH.orderTo(rec, square)` *(Main)* | core: `z:pathToLocation(square)` + stash `rec.orderTile` |
+| `ALH.comeHere(rec)` / `ALH.goTo(rec, square)` *(Main)* | orderTo + set `rec.order` to `"come"` / `"go"` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -152,6 +154,7 @@ test)`. Context callbacks are invoked by the engine as
 
 - **`ALH NPC`** (always) -> Spawn NPC Here / Open Helper Menu / disabled
   "Helpers: N" count.
+  Adds **"Send `<selected>` here"** when `ALH.selected` is a living helper.
 - **`<name>  (helper)`** per living helper on the clicked tile -> Come here /
   Select / Send away. `worldobjects` carries only static tile objects, not
   characters, so we find helpers ourselves: `helpersAt(square)` walks `ALH.npcs`
@@ -159,17 +162,19 @@ test)`. Context callbacks are invoked by the engine as
   (`DistToSquared < 2.25`). This submenu is the spine - movement/work commands
   get added here.
 
-`ALH.selectNPC(rec)` (Main) opens the window and calls `ALH_NPCMenu:selectRec` to
-highlight that helper's row.
-
 ## Commands (Phase C)
 
-`rec.order` on a helper record is the current standing order (`nil` = idle,
-`"come"` = walking to the player). `ALH.comeHere(rec)` sets it and calls
-`z:pathToLocation(playerSquare)`. The `OnTick` handler clears `"come"` once the
-helper is within ~2 tiles. Movement is `PathFindBehavior2`, not `target`, so
-`z:setTarget(nil)` each tick (the tame) doesn't fight the walk. The list row
-shows `(coming)` while the order stands.
+**`ALH.selected`** is the record the player is commanding (or `nil`). Set by
+right-click *Select* (`ALH.selectNPC`) and mirrored from the window's list
+selection each frame in `updateRows()`. Ground commands read it.
+
+**`rec.order`** is a helper's standing order: `nil` (idle), `"come"` (to the
+player), `"go"` (to `rec.orderTile`). `ALH.orderTo(rec, square)` is the shared
+core - `z:pathToLocation(square)` + stash the tile; `ALH.comeHere` / `ALH.goTo`
+wrap it and set the order label. `OnTick` clears the order once the helper is
+within the `ARRIVED` distance for it. Movement runs through `PathFindBehavior2`,
+not `target`, so `z:setTarget(nil)` each tick (the tame) doesn't fight the walk.
+The list row shows `(coming)` / `(going)` while an order stands.
 
 ## Spawning (Phase B)
 
