@@ -85,8 +85,13 @@ Terms and conventions this codebase relies on.
 
 - The game fires named **events**; you attach a **handler** (callback) with
   `Events.<Name>.Add(fn)` and detach with `Events.<Name>.Remove(fn)`.
-- Ones we use / will use: `OnKeyPressed`, `OnFillWorldObjectContextMenu`,
+- Ones we use / will use: `OnKeyStartPressed`, `OnFillWorldObjectContextMenu`,
   `OnGameStart`, `OnCreatePlayer`, `OnPlayerUpdate`, `OnTick`.
+- **Keybinds: prefer `OnKeyStartPressed` over `OnKeyPressed`.** The engine skips
+  `OnKeyStartPressed` while a text field has keyboard focus (it lets
+  `UIManager.onKeyPress` consume the key first), so a keybind won't fire while
+  the player types in chat, a rename dialog, or the debug console.
+  `OnKeyPressed` fires regardless and would need a manual focus guard.
 - **Hot-reload hazard:** re-running a file calls `.Add` again and stacks a
   duplicate handler. Always register through `ALH.hookEvent` (see §6).
 

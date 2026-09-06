@@ -24,7 +24,9 @@ ALH.VERSION      = "0.1.0"
 ALH.KEYBIND_NAME = "ALH: Toggle helper menu"   -- used by ALH_10_Keybinds.lua
 
 -- Handlers registered via ALH.hookEvent, keyed by a stable string so a reload
--- can replace the function without leaving the old one attached to the event.
+-- can replace the function without leaving the old one attached. Each entry is
+-- { event = <name>, fn = <function> } so we detach from the right event even if
+-- a reload moves a handler from one event to another.
 ALH._eventHandlers = ALH._eventHandlers or {}
 
 --- Print to console.txt with a consistent tag.
@@ -35,8 +37,8 @@ end
 --- Attach `fn` to Events[eventName]. `key` identifies this hook; calling again
 --- with the same key (a hot-reload re-running the file) detaches the previous
 --- function first, so the event never accumulates duplicates.
---- @param eventName string  e.g. "OnKeyPressed"
---- @param key       string  stable id for this hook, e.g. "main.keyPressed"
+--- @param eventName string  e.g. "OnKeyStartPressed"
+--- @param key       string  stable id for this hook, e.g. "main.keyToggle"
 --- @param fn        function
 function ALH.hookEvent(eventName, key, fn)
     local event = Events[eventName]
@@ -46,11 +48,12 @@ function ALH.hookEvent(eventName, key, fn)
     end
 
     local previous = ALH._eventHandlers[key]
-    if previous then
-        event.Remove(previous)
+    if previous and Events[previous.event] then
+        Events[previous.event].Remove(previous.fn)
     end
+
     event.Add(fn)
-    ALH._eventHandlers[key] = fn
+    ALH._eventHandlers[key] = { event = eventName, fn = fn }
 end
 
 --- Re-run every loaded ALH lua file in place. -debug sessions only.

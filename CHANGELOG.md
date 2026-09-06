@@ -6,6 +6,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Focus guard** (`feat(keybind)`): `G` no longer toggles the window while the
+  player is entering text (chat, rename dialog, map search, debug console). Done
+  by moving the toggle from `OnKeyPressed` to `OnKeyStartPressed`, which the
+  engine suppresses while a text field has keyboard focus - no manual detection.
 - **Hot reload** (`feat(core)`): `-debug` sessions get a "Reload ALH lua (dev)"
   button in the window that re-runs every ALH file via `reloadLuaFile` - no game
   restart. New `ALH_00_Core.lua` owns the namespace, `ALH.log`, `ALH.hookEvent`
@@ -15,6 +19,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   Done, PZ modding reference, code standards, hot-reload contract.
 
 ### Changed
+- `ALH.hookEvent` now records `{event, fn}` per key, so a hot-reload that moves a
+  handler between events detaches it from the right one.
 - Client lua files renamed with `_NN_` load-order prefixes
   (`ALH_00_Core` … `ALH_40_ContextMenu`) so Core is guaranteed to load first.
 - `Main` / `ContextMenu` / `Keybinds` refactored to be idempotent (safe to

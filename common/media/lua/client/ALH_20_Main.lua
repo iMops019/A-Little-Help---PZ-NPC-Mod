@@ -73,9 +73,13 @@ function ALH.toggleMenu()
     if ALH.menu then ALH.closeMenu() else ALH.openMenu() end
 end
 
--- G (rebindable) toggles the window. Falls back to a hard G if the keybind
--- table wasn't ready at startup for some reason.
-local function onKeyPressed(key)
+-- G (rebindable) toggles the window.
+--
+-- We use OnKeyStartPressed, not OnKeyPressed: the engine skips OnKeyStartPressed
+-- when a text field has keyboard focus (UIManager.onKeyPress consumes the key
+-- first), so typing in chat, a rename dialog, the map search or the debug
+-- console won't pop the menu. OnKeyPressed fires regardless.
+local function onKeyStartPressed(key)
     if not getPlayer() then return end
 
     local bound = getCore():getKey(ALH.KEYBIND_NAME)
@@ -86,6 +90,6 @@ local function onKeyPressed(key)
     end
 end
 
-ALH.hookEvent("OnKeyPressed", "main.keyPressed", onKeyPressed)
+ALH.hookEvent("OnKeyStartPressed", "main.keyToggle", onKeyStartPressed)
 
 ALH.log("main ready")

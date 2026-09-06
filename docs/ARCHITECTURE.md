@@ -69,7 +69,7 @@ The game loads a context's files **alphabetically**, so ALH files carry a
 2. `ALH_10_Keybinds.lua` - adds rows to the global `keyBinding` table
    (dupe-guarded). Reads `ALH.KEYBIND_NAME`.
 3. `ALH_20_Main.lua` - the NPC-list model and window open/close/toggle; hooks
-   `OnKeyPressed`. Reads `ALH.*` from Core.
+   `OnKeyStartPressed` for the G toggle. Reads `ALH.*` from Core.
 4. `ALH_30_NPCMenu.lua` - defines the `ALH_NPCMenu` window class.
 5. `ALH_40_ContextMenu.lua` - hooks `OnFillWorldObjectContextMenu`.
 
@@ -94,7 +94,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.log(msg)` | `print()` with an `[A Little Help]` prefix -> `console.txt` |
 | `ALH.hookEvent(event, key, fn)` | attach an event handler; replaces the prior one for `key` (reload-safe) |
 | `ALH.devReload()` | re-run every ALH lua file; `-debug` only; closes+reopens the window |
-| `ALH._eventHandlers` | `key -> fn` registry backing `hookEvent` |
+| `ALH._eventHandlers` | `key -> {event, fn}` registry backing `hookEvent` |
 | `ALH.npcs` *(Main)* | array of stub tables `{ id, name, x, y, z }` - the model |
 | `ALH.menu` *(Main)* | the live `ALH_NPCMenu` instance, or `nil` when closed |
 | `ALH.spawnNPC(square)` *(Main)* | append a stub (no world actor yet); refreshes the menu |
