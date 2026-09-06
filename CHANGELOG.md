@@ -5,16 +5,19 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
-### Investigated
-- **B-1: `IsoSurvivor` is a dead end in B42.** `SurvivorFactory.CreateSurvivor` +
-  `InstansiateInCell` spawn a survivor fine, but `IsoGameCharacter`'s constructor
-  nulls `bodyDamage` for non-player/non-animal characters (`final` field) and the
-  inherited `update()` NPEs on it every tick. `Say()` also casts to `IsoPlayer`.
-  `spawnNPC` reverted to a stub (still rolls a `SurvivorDesc` for name/look).
-  Next: pick a foundation - tamed `IsoZombie` or headless `IsoPlayer`. See
-  `docs/ARCHITECTURE.md`.
-
 ### Added
+- **Spawn a tamed-zombie helper** (`feat(spawn)`, B-1): Spawn NPC / *Spawn NPC
+  Here* creates an `IsoZombie` via `getVirtualZombieManager():createRealZombieNow`,
+  marks it (`ModData.alhTamed`), `setNoTeeth(true)`, and an `OnTick` hook clears
+  each helper's target so it won't chase. Records name from
+  `SurvivorFactory.CreateSurvivor`. Remove -> `removeFromWorld`. Lore: it's a
+  "kinda cured" infected - the horde ignores it because it still reads as
+  infected. No appearance change or follow yet.
+- Rejected `IsoSurvivor` as the NPC class: dead code in B42 (constructor nulls
+  the `final` `bodyDamage`, inherited `update()` NPEs on it every tick; `Say()`
+  casts to `IsoPlayer`). Rejected headless `IsoPlayer` (world player-slot
+  assumptions). See `docs/ARCHITECTURE.md`.
+
 - **ESC closes the window** (`feat(ui)`): when the helper window is open, ESC
   closes it and is consumed, so it doesn't also open the pause menu; a second ESC
   does. Standard vanilla build/craft/map behaviour.

@@ -98,8 +98,8 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.npcs` *(Main)* | array of records `{ id, name, desc, obj, x, y, z }` - the model |
 | `ALH.menu` *(Main)* | the live `ALH_NPCMenu` instance, or `nil` when closed |
 | `ALH.windowRect` *(Main)* | `{x,y,w,h}` of the window's last position, or `nil` for a centred default |
-| `ALH.spawnNPC(square)` *(Main)* | add a record (rolls a `SurvivorDesc`; **no world actor yet** - see B-1 finding below) |
-| `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()` if any, drop the record; refreshes the menu |
+| `ALH.spawnNPC(square)` *(Main)* | spawn a tamed-zombie helper (`createRealZombieNow` + `setNoTeeth` + marker), add a record |
+| `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()`, drop the record; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
@@ -172,17 +172,39 @@ object list. But:
 init its own constructor doesn't do. Not patchable from Lua. B42 has no working
 friendly-NPC class; B43 is "the NPC build".
 
-`ALH.spawnNPC` is a **stub** (records a `SurvivorDesc` for name/appearance, no
-world actor) until a foundation is chosen:
+### Foundation: a **tamed zombie**
 
-- **A - tamed `IsoZombie`** (`getVirtualZombieManager():createRealZombieNow`):
-  fully wired (bodyDamage, AI, animation, save). Implements `IHumanVisual` -
-  `setReanimatedPlayer(true)` + `dressInNamedOutfit(...)` gives a human look;
-  `setNoTeeth`, `setTarget(nil)`, `makeInactive` + a per-tick AI override tame
-  it. Zombies ignore other zombies, so it's invisible to the horde. What B41
-  companion mods did.
-- **B - headless `IsoPlayer`**: fully initialised, but the engine assumes
-  `IsoPlayer`s are controlled and occupy world player slots - fragile.
+A helper is an `IsoZombie` - the only fully-wired character class we can spawn in
+B42 (bodyDamage, AI, animation, sound, save/load all work). **Lore:** it's a
+"kinda cured" infected. The Knox virus is suppressed, not gone - which is exactly
+why the horde ignores it (zombies don't attack zombies), why it shambles, and
+why it can't fully talk. "A Little Help" runs both ways: you give the infected a
+little help, they give you a little help.
+
+Rejected: headless `IsoPlayer` (engine assumes `IsoPlayer`s are controlled and
+occupy world player slots - fragile).
+
+`ALH.spawnNPC(square)`:
+
+1. `getVirtualZombieManager():createRealZombieNow(x+0.5, y+0.5, z)` -> `IsoZombie`.
+2. Validate (`nil`, then `z:getSquare()` nil = bad tile - discard with
+   `removeFromWorld`).
+3. `SurvivorFactory.CreateSurvivor()` + `randomName` for the display name
+   (`getForename`/`getSurname` - this part of `SurvivorFactory` works fine).
+4. Tame: `z:getModData().alhTamed = true` (marker), `z:setNoTeeth(true)`.
+5. Record `{ id, name, desc, obj = z, x, y, z }`.
+
+An `OnTick` hook walks `ALH.npcs` and clears each helper's target
+(`z:setTarget(nil)`) so it won't chase. `OnTick` (once/tick over a tiny list),
+**not** `OnZombieUpdate` (every zombie, every tick - would allocate a ModData
+table per zombie).
+
+`ALH.removeNPC(rec)` -> `rec.obj:removeFromWorld()`.
+
+B-1 is deliberately the floor: no appearance change, no follow, no stationary
+lock. Just: does a tamed zombie spawn, stand there, and leave the player alone.
+Observations drive B-2 (human look via `setReanimatedPlayer` + an outfit) and
+B-3 (follow via `z:pathToCharacter(player)`).
 
 ## Adding a feature - checklist
 
