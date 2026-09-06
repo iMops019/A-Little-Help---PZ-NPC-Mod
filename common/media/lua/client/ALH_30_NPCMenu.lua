@@ -44,6 +44,22 @@ function ALH_NPCMenu:isKeyConsumed(key)
     return key == Keyboard.KEY_ESCAPE
 end
 
+-- ISLayoutManager persistence. We only let it remember geometry - open/closed is
+-- driven by ALH.openMenu / ALH.closeMenu, never restored from disk (otherwise a
+-- saved "visible=false" hides the window the instant openMenu registers it).
+function ALH_NPCMenu:RestoreLayout(name, layout)
+    local x, y = tonumber(layout.x), tonumber(layout.y)
+    local w, h = tonumber(layout.width), tonumber(layout.height)
+    if x and y then self:setX(x); self:setY(y) end
+    if w and h then self:setWidth(w); self:setHeight(h) end
+end
+
+function ALH_NPCMenu:SaveLayout(name, layout)
+    layout.x, layout.y = self:getX(), self:getY()
+    layout.width, layout.height = self:getWidth(), self:getHeight()
+    layout.visible = "false"
+end
+
 function ALH_NPCMenu:createChildren()
     ISCollapsableWindow.createChildren(self)
 

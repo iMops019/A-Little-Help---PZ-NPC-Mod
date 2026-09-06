@@ -6,6 +6,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Fixed
+- **Menu opened invisibly.** `ISLayoutManager.RegisterWindow` (called from
+  `openMenu`) runs `RestoreLayout`, and the inherited one honoured a saved
+  `visible=false` from `layout.ini` - hiding the window the instant we opened it.
+  `ALH_NPCMenu` now overrides `RestoreLayout`/`SaveLayout` to persist geometry
+  only; `openMenu` also force-`setVisible(true)` as a backstop.
 - `ALH.toggleMenu` is debounced (200 ms) - a stray duplicate key handler left by
   a long hot-reload session was opening the window on the G press and closing it
   on the G release. A restart clears the leak; the debounce stops the symptom.

@@ -324,14 +324,15 @@ function ALH.openMenu()
     ALH.menu:initialise()
     ALH.menu:addToUIManager()
 
-    -- Persist geometry across game sessions (Zomboid/Lua/layout.ini). Registering
-    -- also restores the on-disk layout right now - what we want on the first open
-    -- of a session. On later opens ALH.windowRect is fresher, so re-apply it.
+    -- Persist geometry across game sessions (Zomboid/Lua/layout.ini). ALH_NPCMenu
+    -- overrides RestoreLayout/SaveLayout to only touch geometry, never visibility.
     ISLayoutManager.RegisterWindow(LAYOUT_NAME, ALH_NPCMenu, ALH.menu)
     if r then
         ALH.menu:setX(r.x)
         ALH.menu:setY(r.y)
     end
+    ALH.menu:setVisible(true)     -- belt & braces vs any RestoreLayout hide
+    ALH.menu:addToUIManager()
 
     ALH.menu:refreshList()
     if ALH.selected then ALH.menu:selectRec(ALH.selected) end
