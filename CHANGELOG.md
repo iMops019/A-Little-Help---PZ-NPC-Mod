@@ -6,6 +6,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **"Come here" command** (`feat(command)`, C-1): the helper right-click submenu
+  gains **Come here** -> `ALH.comeHere(rec)` calls `z:pathToLocation(playerSquare)`
+  (the debug menu's "Walk Here" recipe; `PathFindBehavior2`-driven, so the
+  per-tick target-clear doesn't cancel it). The list row shows `(coming)` until
+  the helper is within ~2 tiles. First movement order - Phase C / D build on it.
 - **Right-click a helper** (`feat(ui)`, B-4): right-clicking a tile a living
   helper stands on adds a top-level `<name>  (helper)` option -> **Select**
   (open the window, highlight its row) / **Send away** (remove it). `helpersAt()`

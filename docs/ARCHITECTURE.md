@@ -102,6 +102,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()`, drop the record; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
 | `ALH.selectNPC(rec)` *(Main)* | open the window and select `rec`'s row (right-click "Select") |
+| `ALH.comeHere(rec)` *(Main)* | walk the helper to the player (`z:pathToLocation`); sets `rec.order = "come"` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -151,14 +152,24 @@ test)`. Context callbacks are invoked by the engine as
 
 - **`ALH NPC`** (always) -> Spawn NPC Here / Open Helper Menu / disabled
   "Helpers: N" count.
-- **`<name>  (helper)`** per living helper on the clicked tile -> Select / Send
-  away. `worldobjects` carries only static tile objects, not characters, so we
-  find helpers ourselves: `helpersAt(square)` walks `ALH.npcs` for one whose
-  square is at the clicked Z and within ~1.5 tiles (`DistToSquared < 2.25`). This
-  submenu is the spine - movement/work commands get added here.
+- **`<name>  (helper)`** per living helper on the clicked tile -> Come here /
+  Select / Send away. `worldobjects` carries only static tile objects, not
+  characters, so we find helpers ourselves: `helpersAt(square)` walks `ALH.npcs`
+  for one whose square is at the clicked Z and within ~1.5 tiles
+  (`DistToSquared < 2.25`). This submenu is the spine - movement/work commands
+  get added here.
 
 `ALH.selectNPC(rec)` (Main) opens the window and calls `ALH_NPCMenu:selectRec` to
 highlight that helper's row.
+
+## Commands (Phase C)
+
+`rec.order` on a helper record is the current standing order (`nil` = idle,
+`"come"` = walking to the player). `ALH.comeHere(rec)` sets it and calls
+`z:pathToLocation(playerSquare)`. The `OnTick` handler clears `"come"` once the
+helper is within ~2 tiles. Movement is `PathFindBehavior2`, not `target`, so
+`z:setTarget(nil)` each tick (the tame) doesn't fight the walk. The list row
+shows `(coming)` while the order stands.
 
 ## Spawning (Phase B)
 

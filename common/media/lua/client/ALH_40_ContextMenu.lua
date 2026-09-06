@@ -4,7 +4,7 @@
     Two things, both plain vanilla-style context options:
       - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu
       - top-level "<name> (helper)" for each helper on the clicked tile
-        -> Select / Send away. This is the spine future commands hang off.
+        -> Come here / Select / Send away. The spine commands hang off.
 ]]
 
 ALH_ContextMenu = ALH_ContextMenu or {}
@@ -19,6 +19,10 @@ end
 
 function ALH_ContextMenu.onSelectHelper(worldobjects, rec)
     ALH.selectNPC(rec)
+end
+
+function ALH_ContextMenu.onComeHere(worldobjects, rec)
+    ALH.comeHere(rec)
 end
 
 function ALH_ContextMenu.onSendAway(worldobjects, rec)
@@ -67,6 +71,7 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
         local opt  = context:addOption((rec.name or "Helper") .. "  (helper)", worldobjects, nil)
         local hsub = ISContextMenu:getNew(context)
         context:addSubMenu(opt, hsub)
+        hsub:addOption("Come here", worldobjects, ALH_ContextMenu.onComeHere, rec)
         hsub:addOption("Select", worldobjects, ALH_ContextMenu.onSelectHelper, rec)
         hsub:addOption("Send away", worldobjects, ALH_ContextMenu.onSendAway, rec)
     end

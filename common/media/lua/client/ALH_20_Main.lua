@@ -104,14 +104,35 @@ function ALH.removeNPC(rec)
     if ALH.menu then ALH.menu:refreshList() end
 end
 
--- Keep tamed zombies from chasing anything. Driven off OnTick (once per tick)
--- over our small roster - not OnZombieUpdate, which would fire for every zombie
--- in the world and allocate a ModData table for each.
+--- Command a helper to walk to the player. Mirrors the debug menu's
+--- "Selected: Walk Here". `pathToLocation` drives PathFindBehavior2, which is
+--- independent of `target`, so the per-tick target-clear below won't cancel it.
+function ALH.comeHere(rec)
+    local z = rec.obj
+    local player = getPlayer()
+    if not z or z:isDead() or not player then return end
+
+    local sq = player:getCurrentSquare()
+    if not sq then return end
+
+    z:pathToLocation(sq:getX(), sq:getY(), sq:getZ())
+    rec.order = "come"
+    ALH.log("comeHere: " .. tostring(rec.name) .. " -> player")
+end
+
+-- Per-tick roster maintenance: keep helpers from chasing anything, and drop the
+-- "come" order once they've arrived. Driven off OnTick (once per tick over our
+-- small roster), not OnZombieUpdate (fires for every zombie in the world).
 local function onTick()
+    local player = getPlayer()
     for _, rec in ipairs(ALH.npcs) do
         local z = rec.obj
-        if z and not z:isDead() and z:getTarget() then
-            z:setTarget(nil)
+        if z and not z:isDead() then
+            if z:getTarget() then z:setTarget(nil) end
+            if rec.order == "come" and player
+                and z:DistToSquared(player:getX(), player:getY()) < 4 then
+                rec.order = nil   -- within ~2 tiles: arrived
+            end
         end
     end
 end

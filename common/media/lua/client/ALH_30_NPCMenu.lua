@@ -129,11 +129,9 @@ function ALH_NPCMenu:rowText(rec)
         return (rec.name or "Helper") .. "  --  dead"
     end
     local player = getPlayer()
-    if player then
-        return string.format("%s  --  %d tiles", rec.name or "Helper",
-            math.floor(player:DistTo(z)))
-    end
-    return rec.name or "Helper"
+    local dist   = player and (math.floor(player:DistTo(z)) .. " tiles") or "?"
+    local order  = (rec.order == "come") and "  (coming)" or ""
+    return string.format("%s  --  %s%s", rec.name or "Helper", dist, order)
 end
 
 --- Rebuild the list box from ALH.npcs (call when the roster changes).
