@@ -5,7 +5,7 @@
       - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu
                               / "Send <selected> here" when a helper is selected
       - top-level "<name> (helper)" for each helper on the clicked tile
-        -> Come here / Select / Send away. The spine commands hang off.
+        -> Come here / Follow me|Stay / Select / Send away.
 ]]
 
 ALH_ContextMenu = ALH_ContextMenu or {}
@@ -28,6 +28,14 @@ end
 
 function ALH_ContextMenu.onGoHere(worldobjects, player, square)
     if ALH.selected then ALH.goTo(ALH.selected, square) end
+end
+
+function ALH_ContextMenu.onFollow(worldobjects, rec)
+    ALH.follow(rec)
+end
+
+function ALH_ContextMenu.onStay(worldobjects, rec)
+    ALH.stay(rec)
 end
 
 function ALH_ContextMenu.onSendAway(worldobjects, rec)
@@ -84,6 +92,11 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
         local hsub = ISContextMenu:getNew(context)
         context:addSubMenu(opt, hsub)
         hsub:addOption("Come here", worldobjects, ALH_ContextMenu.onComeHere, rec)
+        if rec.order == "follow" then
+            hsub:addOption("Stay", worldobjects, ALH_ContextMenu.onStay, rec)
+        else
+            hsub:addOption("Follow me", worldobjects, ALH_ContextMenu.onFollow, rec)
+        end
         hsub:addOption("Select", worldobjects, ALH_ContextMenu.onSelectHelper, rec)
         hsub:addOption("Send away", worldobjects, ALH_ContextMenu.onSendAway, rec)
     end

@@ -132,7 +132,8 @@ function ALH_NPCMenu:rowText(rec)
     local dist   = player and (math.floor(player:DistTo(z)) .. " tiles") or "?"
     local order  = ""
     if rec.order == "come" then order = "  (coming)"
-    elseif rec.order == "go" then order = "  (going)" end
+    elseif rec.order == "go" then order = "  (going)"
+    elseif rec.order == "follow" then order = "  (following)" end
     return string.format("%s  --  %s%s", rec.name or "Helper", dist, order)
 end
 

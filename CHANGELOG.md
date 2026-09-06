@@ -6,6 +6,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Follow / Stay** (`feat(command)`, C-3): helper right-click submenu toggles
+  **Follow me** <-> **Stay**. `ALH.follow` sets `rec.order = "follow"` and
+  `OnTick` re-paths to the player every 800 ms while > 2 tiles away; `ALH.stay`
+  clears the order and `z:setPath2(nil)`. Row shows `(following)`.
 - **"Send helper here" command** (`feat(command)`, C-2): right-click the ground
   while a helper is selected -> "Send `<name>` here" -> `ALH.goTo(rec, square)`
   paths it to that tile. `ALH.selected` (set by right-click *Select*, mirrored

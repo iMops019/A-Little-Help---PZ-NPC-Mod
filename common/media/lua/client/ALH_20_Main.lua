@@ -141,18 +141,45 @@ function ALH.goTo(rec, square)
     end
 end
 
---- How close (squared tile distance) counts as "arrived" for each order.
+--- "Follow me" - trail the player (onTick re-paths periodically).
+function ALH.follow(rec)
+    if not rec.obj or rec.obj:isDead() then return end
+    rec.order   = "follow"
+    rec.followAt = nil   -- re-path on the next tick
+    ALH.log("follow: " .. tostring(rec.name))
+end
+
+--- "Stay" - stop and hold position.
+function ALH.stay(rec)
+    rec.order, rec.orderTile, rec.followAt = nil, nil, nil
+    if rec.obj and not rec.obj:isDead() then
+        rec.obj:setPath2(nil)   -- drop the current path
+    end
+    ALH.log("stay: " .. tostring(rec.name))
+end
+
+--- How close (squared tile distance) counts as "arrived" for a one-shot order.
 local ARRIVED = { come = 4, go = 2 }
 
--- Per-tick roster maintenance: keep helpers from chasing anything, and drop a
--- standing order once the helper has arrived. Driven off OnTick (once per tick
--- over our small roster), not OnZombieUpdate (every zombie in the world).
+-- Per-tick roster maintenance: keep helpers from chasing anything, re-path
+-- followers, and drop a one-shot order once the helper has arrived. Driven off
+-- OnTick (once per tick over our small roster), not OnZombieUpdate.
 local function onTick()
     local player = getPlayer()
     for _, rec in ipairs(ALH.npcs) do
         local z = rec.obj
         if z and not z:isDead() then
             if z:getTarget() then z:setTarget(nil) end
+
+            if rec.order == "follow" and player then
+                local now = getTimestampMs()
+                if not rec.followAt or now >= rec.followAt then
+                    rec.followAt = now + 800
+                    if z:DistToSquared(player:getX(), player:getY()) > 4 then
+                        ALH.orderTo(rec, player:getCurrentSquare())   -- keeps rec.order
+                    end
+                end
+            end
 
             local goal = ARRIVED[rec.order]
             if goal then

@@ -105,6 +105,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.selectNPC(rec)` *(Main)* | set `ALH.selected`, open the window on its row |
 | `ALH.orderTo(rec, square)` *(Main)* | core: `z:pathToLocation(square)` + stash `rec.orderTile` |
 | `ALH.comeHere(rec)` / `ALH.goTo(rec, square)` *(Main)* | orderTo + set `rec.order` to `"come"` / `"go"` |
+| `ALH.follow(rec)` / `ALH.stay(rec)` *(Main)* | `rec.order = "follow"` (OnTick re-paths) / clear order + `setPath2(nil)` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -168,13 +169,22 @@ test)`. Context callbacks are invoked by the engine as
 right-click *Select* (`ALH.selectNPC`) and mirrored from the window's list
 selection each frame in `updateRows()`. Ground commands read it.
 
-**`rec.order`** is a helper's standing order: `nil` (idle), `"come"` (to the
-player), `"go"` (to `rec.orderTile`). `ALH.orderTo(rec, square)` is the shared
-core - `z:pathToLocation(square)` + stash the tile; `ALH.comeHere` / `ALH.goTo`
-wrap it and set the order label. `OnTick` clears the order once the helper is
-within the `ARRIVED` distance for it. Movement runs through `PathFindBehavior2`,
-not `target`, so `z:setTarget(nil)` each tick (the tame) doesn't fight the walk.
-The list row shows `(coming)` / `(going)` while an order stands.
+**`rec.order`** is a helper's standing order:
+
+| order | meaning | cleared by |
+| --- | --- | --- |
+| `nil` | idle - holds position | - |
+| `"come"` | walking to the player | `OnTick` on arrival (`ARRIVED.come`) |
+| `"go"` | walking to `rec.orderTile` | `OnTick` on arrival (`ARRIVED.go`) |
+| `"follow"` | trailing the player | `ALH.stay` only |
+
+`ALH.orderTo(rec, square)` is the shared core - `z:pathToLocation(square)` + stash
+`rec.orderTile`. `comeHere` / `goTo` wrap it once; `follow` re-runs it from
+`OnTick` every 800 ms while the player is > 2 tiles away (`rec.followAt`
+throttle). `stay` clears the order and `z:setPath2(nil)`. Movement runs through
+`PathFindBehavior2`, not `target`, so `z:setTarget(nil)` each tick (the tame)
+doesn't fight the walk. The list row shows `(coming)` / `(going)` /
+`(following)`.
 
 ## Spawning (Phase B)
 
