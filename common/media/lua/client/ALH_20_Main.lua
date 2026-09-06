@@ -357,8 +357,12 @@ function ALH.closeMenu()
     if ALH.menu then ALH.menu:close() end
 end
 
---- Toggle the helper window.
+--- Toggle the helper window. Debounced: two toggles inside 200 ms (a key press
+--- + release, or a stray duplicate handler) count as one.
 function ALH.toggleMenu()
+    local now = getTimestampMs()
+    if ALH._toggledAt and now - ALH._toggledAt < 200 then return end
+    ALH._toggledAt = now
     if ALH.menu then ALH.closeMenu() else ALH.openMenu() end
 end
 

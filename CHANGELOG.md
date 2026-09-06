@@ -6,6 +6,9 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Fixed
+- `ALH.toggleMenu` is debounced (200 ms) - a stray duplicate key handler left by
+  a long hot-reload session was opening the window on the G press and closing it
+  on the G release. A restart clears the leak; the debounce stops the symptom.
 - **"Give axe" crash**: `z:setPrimaryHandItem` fires `OnEquipPrimary`, and
   vanilla `FishingHandler` (and friends) call `player:getPlayerNum()` on the
   equipper - nil on a zombie. The equip lands fine, so the calls are now
