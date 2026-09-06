@@ -6,6 +6,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **"Chop this tree"** (`feat(work)`, D-2): right-click a tree with an armed
+  helper selected -> "Send `<name>` to chop this tree" -> `ALH.chopTree(rec, tree)`.
+  `tickHelper` walks it to the tree, then every 1.2 s faces it and fires
+  `tree:WeaponHitEffects` (chip particles + chop sound). Effects only - **no
+  felling, no resources, no arm-swing animation** yet (that's D-3 + an anim
+  follow-up). Row shows `(chopping)`. `onTick` body factored into `tickHelper`.
 - **Give axe** (`feat(work)`, D-1): helper right-click submenu gains **Give axe**
   (until armed) -> `ALH.giveAxe(rec)` adds `Base.Axe` to its inventory and equips
   it in both hands (`setPrimaryHandItem` + `setSecondaryHandItem`, per the

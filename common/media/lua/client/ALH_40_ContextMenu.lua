@@ -2,8 +2,8 @@
     A Little Help  --  world right-click menu.
 
     Plain vanilla-style context options:
-      - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu
-                              / "Send <selected> here" when a helper is selected
+      - top-level "ALH NPC"  -> Spawn NPC Here / Open Helper Menu, plus (when a
+        helper is selected) "Send <name> here" and, on a tree, "chop this tree"
       - top-level "<name> (helper)" for each helper on the clicked tile
         -> Come here / Follow me|Stay / Give axe / Select / Send away.
 ]]
@@ -40,6 +40,10 @@ end
 
 function ALH_ContextMenu.onGiveAxe(worldobjects, rec)
     ALH.giveAxe(rec)
+end
+
+function ALH_ContextMenu.onChopTree(worldobjects, rec, tree)
+    ALH.chopTree(rec, tree)
 end
 
 function ALH_ContextMenu.onSendAway(worldobjects, rec)
@@ -80,10 +84,16 @@ local function onFillWorldObjectContextMenu(playerIndex, context, worldobjects, 
     sub:addOption("Spawn NPC Here", worldobjects, ALH_ContextMenu.onSpawnHere, player, square)
     sub:addOption("Open Helper Menu (G)", worldobjects, ALH_ContextMenu.onOpenMenu)
 
-    -- Send the selected helper to this tile.
+    -- Commands for the selected helper on the clicked tile.
     local sel = ALH.selected
     if sel and sel.obj and not sel.obj:isDead() then
-        sub:addOption("Send " .. (sel.name or "helper") .. " here",
+        local name = sel.name or "helper"
+        local tree = square and square:HasTree() and square:getTree()
+        if tree and sel.armed then
+            sub:addOption("Send " .. name .. " to chop this tree",
+                worldobjects, ALH_ContextMenu.onChopTree, sel, tree)
+        end
+        sub:addOption("Send " .. name .. " here",
             worldobjects, ALH_ContextMenu.onGoHere, player, square)
     end
 

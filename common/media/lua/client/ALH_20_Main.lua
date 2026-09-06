@@ -165,51 +165,104 @@ function ALH.follow(rec)
     ALH.log("follow: " .. tostring(rec.name))
 end
 
---- "Stay" - stop and hold position.
+--- "Stay" - stop and hold position, drop any work.
 function ALH.stay(rec)
     rec.order, rec.orderTile, rec.followAt = nil, nil, nil
+    rec.chopTree, rec.chopAt, rec.chopMoveAt = nil, nil, nil
     if rec.obj and not rec.obj:isDead() then
         rec.obj:setPath2(nil)   -- drop the current path
     end
     ALH.log("stay: " .. tostring(rec.name))
 end
 
---- How close (squared tile distance) counts as "arrived" for a one-shot order.
+--- Command an armed helper to chop `tree`: walk to it, then hit it on a loop.
+--- D-2 does the loop with hit *effects* only (chips + sound). No felling, no
+--- resources, no arm-swing animation - that's D-3 and an anim-system follow-up.
+function ALH.chopTree(rec, tree)
+    local z = rec.obj
+    if not z or z:isDead() or not tree then return end
+    if not rec.armed then
+        ALH.log("chopTree: " .. tostring(rec.name) .. " has no axe")
+        return
+    end
+    rec.order    = "chop"
+    rec.chopTree = tree
+    rec.chopAt, rec.chopMoveAt = 0, 0
+    ALH.log("chopTree: " .. tostring(rec.name))
+end
+
+-- Squared tile distance that counts as "arrived" for a one-shot order.
 local ARRIVED = { come = 4, go = 2 }
 
--- Per-tick roster maintenance: keep helpers from chasing anything, re-path
--- followers, and drop a one-shot order once the helper has arrived. Driven off
--- OnTick (once per tick over our small roster), not OnZombieUpdate.
+local CHOP_REACH    = 2.6    -- <= this (squared) from the tree tile = close enough to swing
+local CHOP_INTERVAL = 1200   -- ms between swings
+local FOLLOW_GAP    = 4      -- squared distance from the player before a follower re-paths
+
+--- One helper's per-tick AI. Called for every roster entry each tick.
+local function tickHelper(rec, player)
+    local z = rec.obj
+    if not z or z:isDead() then return end
+
+    if z:getTarget() then z:setTarget(nil) end   -- stays tame
+
+    local o   = rec.order
+    local now = getTimestampMs()
+
+    if o == "follow" then
+        if player and (not rec.followAt or now >= rec.followAt) then
+            rec.followAt = now + 800
+            if z:DistToSquared(player:getX(), player:getY()) > FOLLOW_GAP then
+                ALH.orderTo(rec, player:getCurrentSquare())   -- keeps rec.order
+            end
+        end
+
+    elseif o == "chop" then
+        local tree = rec.chopTree
+        if not tree or tree:getObjectIndex() < 0 then
+            rec.order, rec.chopTree = nil, nil
+            return
+        end
+        local tsq = tree:getSquare()
+        if not tsq then return end
+        local cx, cy = tsq:getX() + 0.5, tsq:getY() + 0.5
+
+        if z:DistToSquared(cx, cy) > CHOP_REACH then
+            if now >= (rec.chopMoveAt or 0) then
+                rec.chopMoveAt = now + 800
+                ALH.orderTo(rec, tsq)   -- pathfinding routes to an adjacent tile
+            end
+        else
+            z:setPath2(nil)
+            z:faceThisObject(tree)
+            if now - (rec.chopAt or 0) >= CHOP_INTERVAL then
+                rec.chopAt = now
+                local axe = z:getPrimaryHandItem()
+                if axe then tree:WeaponHitEffects(z, axe) end
+            end
+        end
+
+    else
+        local goal = ARRIVED[o]
+        if goal then
+            local tx, ty
+            if o == "come" then
+                tx, ty = player and player:getX(), player and player:getY()
+            elseif rec.orderTile then
+                tx, ty = rec.orderTile[1] + 0.5, rec.orderTile[2] + 0.5
+            end
+            if tx and z:DistToSquared(tx, ty) < goal then
+                rec.order, rec.orderTile = nil, nil
+            end
+        end
+    end
+end
+
+-- Per-tick roster maintenance. OnTick (once per tick over our small roster),
+-- not OnZombieUpdate (fires for every zombie in the world).
 local function onTick()
     local player = getPlayer()
     for _, rec in ipairs(ALH.npcs) do
-        local z = rec.obj
-        if z and not z:isDead() then
-            if z:getTarget() then z:setTarget(nil) end
-
-            if rec.order == "follow" and player then
-                local now = getTimestampMs()
-                if not rec.followAt or now >= rec.followAt then
-                    rec.followAt = now + 800
-                    if z:DistToSquared(player:getX(), player:getY()) > 4 then
-                        ALH.orderTo(rec, player:getCurrentSquare())   -- keeps rec.order
-                    end
-                end
-            end
-
-            local goal = ARRIVED[rec.order]
-            if goal then
-                local tx, ty
-                if rec.order == "come" then
-                    tx, ty = player and player:getX(), player and player:getY()
-                elseif rec.orderTile then
-                    tx, ty = rec.orderTile[1] + 0.5, rec.orderTile[2] + 0.5
-                end
-                if tx and z:DistToSquared(tx, ty) < goal then
-                    rec.order, rec.orderTile = nil, nil
-                end
-            end
-        end
+        tickHelper(rec, player)
     end
 end
 ALH.hookEvent("OnTick", "spawn.tameZombies", onTick)

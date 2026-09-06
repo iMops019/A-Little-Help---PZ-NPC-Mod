@@ -107,6 +107,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.comeHere(rec)` / `ALH.goTo(rec, square)` *(Main)* | orderTo + set `rec.order` to `"come"` / `"go"` |
 | `ALH.follow(rec)` / `ALH.stay(rec)` *(Main)* | `rec.order = "follow"` (OnTick re-paths) / clear order + `setPath2(nil)` |
 | `ALH.giveAxe(rec)` *(Main)* | `AddItem("Base.Axe")` + set primary & secondary hand item; `rec.armed = true` |
+| `ALH.chopTree(rec, tree)` *(Main)* | `rec.order = "chop"` + `rec.chopTree`; `tickHelper` walks to it and loops `WeaponHitEffects` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -175,25 +176,35 @@ selection each frame in `updateRows()`. Ground commands read it.
 | order | meaning | cleared by |
 | --- | --- | --- |
 | `nil` | idle - holds position | - |
-| `"come"` | walking to the player | `OnTick` on arrival (`ARRIVED.come`) |
-| `"go"` | walking to `rec.orderTile` | `OnTick` on arrival (`ARRIVED.go`) |
+| `"come"` | walking to the player | `tickHelper` on arrival (`ARRIVED.come`) |
+| `"go"` | walking to `rec.orderTile` | `tickHelper` on arrival (`ARRIVED.go`) |
 | `"follow"` | trailing the player | `ALH.stay` only |
+| `"chop"` | chopping `rec.chopTree` | tree gone (`getObjectIndex() < 0`) or `ALH.stay` |
 
 `ALH.orderTo(rec, square)` is the shared core - `z:pathToLocation(square)` + stash
-`rec.orderTile`. `comeHere` / `goTo` wrap it once; `follow` re-runs it from
-`OnTick` every 800 ms while the player is > 2 tiles away (`rec.followAt`
-throttle). `stay` clears the order and `z:setPath2(nil)`. Movement runs through
-`PathFindBehavior2`, not `target`, so `z:setTarget(nil)` each tick (the tame)
-doesn't fight the walk. The list row shows `(coming)` / `(going)` /
-`(following)`.
+`rec.orderTile`. `comeHere` / `goTo` wrap it once. Everything per-tick lives in
+`tickHelper(rec, player)` (one helper's AI; `onTick` just loops the roster):
+clear `target`, re-path a `follow` (every 800 ms while > 2 tiles from the
+player), advance a `chop`, or check a `come`/`go` for arrival. `stay` clears the
+order and `z:setPath2(nil)`. Movement runs through `PathFindBehavior2`, not
+`target`, so `z:setTarget(nil)` each tick (the tame) doesn't fight the walk.
+The list row shows `(coming)` / `(going)` / `(following)` / `(chopping)`.
 
 ## Work (Phase D)
 
-`rec.armed` - the helper is carrying an axe (`ALH.giveAxe`: `AddItem("Base.Axe")`
-+ `setPrimaryHandItem` / `setSecondaryHandItem`, both hands since it's a
-two-hander). Row shows `[axe]`. Next: command an armed helper to a tree and loop
-the chop animation (D-2), then a custom tree-HP counter + fell + RNG loot (D-3) -
-deliberately not vanilla `ISChopTreeAction` (player-fatigue-gated, fast fell).
+`rec.armed` - the helper carries an axe (`ALH.giveAxe`: `AddItem("Base.Axe")` +
+`setPrimaryHandItem` / `setSecondaryHandItem`, both hands - two-hander). Row shows
+`[axe]`.
+
+`ALH.chopTree(rec, tree)` sets `rec.order = "chop"` + `rec.chopTree`. `tickHelper`
+walks it to the tree (`ALH.orderTo(rec, tree:getSquare())`, pathfinding routes
+adjacent), then every `CHOP_INTERVAL` ms: `z:setPath2(nil)`, `z:faceThisObject`,
+`tree:WeaponHitEffects(z, axe)` - chip particles + chop sound. **D-2 is
+effects-only**: no `WeaponHit` (damage), no felling, no resources - and **no
+arm-swing animation** (that's a timed-action anim, player-only; a zombie would
+need direct anim-variable driving - deferred). D-3 adds a custom tree-HP counter
+(~100 swings), felling, and an RNG loot table - deliberately not vanilla
+`ISChopTreeAction` (player-fatigue-gated, fast fell).
 
 ## Spawning (Phase B)
 
