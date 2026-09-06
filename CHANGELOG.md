@@ -6,6 +6,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Live helper status in the list** (`feat(ui)`, B-3): each row shows
+  `name -- N tiles` (distance to the player) or `name -- dead`, refreshed ~4x/sec
+  while the window is open (`prerender` -> `updateRows`, text-only so selection
+  and scroll are kept). Replaces the stale spawn-coordinate readout.
 - **Spawn a tamed-zombie helper** (`feat(spawn)`, B-1): Spawn NPC / *Spawn NPC
   Here* calls `createZombie(x, y, z, nil, 0, IsoDirections.S)` (the B42
   single-zombie global), marks it (`ModData.alhTamed`), `setNoTeeth(true)`, and

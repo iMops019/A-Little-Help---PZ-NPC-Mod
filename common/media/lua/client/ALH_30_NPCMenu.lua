@@ -1,12 +1,13 @@
 --[[
     A Little Help  --  the helper window.
 
-    A draggable, resizable ISCollapsableWindow: a Tracked NPCs list and rows of
-    buttons. The buttons don't touch the world yet (v0.1). In -debug sessions an
-    extra "Reload ALH lua" button hot-reloads the mod (see ALH.devReload).
+    A draggable, resizable ISCollapsableWindow: a list of tracked helpers with
+    live status (distance, alive/dead) plus a row of buttons. In -debug sessions
+    an extra "Reload ALH lua" button hot-reloads the mod (see ALH.devReload).
 
-    View only: this widget reads ALH.npcs and calls ALH.* actions. It holds no
-    domain state of its own.
+    View only: reads ALH.npcs, calls ALH.* actions. Holds no domain state. The
+    list is refreshed structurally by refreshList() (rows added/removed) and its
+    text is updated live each frame by updateRows() from prerender().
 ]]
 
 require "ISUI/ISCollapsableWindow"
@@ -84,14 +85,14 @@ function ALH_NPCMenu:createChildren()
     self.spawnBtn:initialise()
     self.spawnBtn:instantiate()
     self.spawnBtn:enableAcceptColor()
-    self.spawnBtn:setTooltip("Adds a placeholder NPC to the list. Nothing spawns in the world yet.")
+    self.spawnBtn:setTooltip("Spawn a tamed-zombie helper at your feet.")
     self:addChild(self.spawnBtn)
 
     self.removeBtn = ISButton:new(x + halfW + PAD, y, halfW, BTN_H, "Remove", self, ALH_NPCMenu.onButton)
     self.removeBtn.internal = "REMOVE"
     self.removeBtn:initialise()
     self.removeBtn:instantiate()
-    self.removeBtn:setTooltip("Removes the selected NPC from the list.")
+    self.removeBtn:setTooltip("Remove the selected helper from the world.")
     self:addChild(self.removeBtn)
     y = y + BTN_H + PAD
 
@@ -121,7 +122,21 @@ function ALH_NPCMenu:createChildren()
     end
 end
 
---- Rebuild the list box from ALH.npcs.
+--- One row's live status line.
+function ALH_NPCMenu:rowText(rec)
+    local z = rec.obj
+    if not z or z:isDead() then
+        return (rec.name or "Helper") .. "  --  dead"
+    end
+    local player = getPlayer()
+    if player then
+        return string.format("%s  --  %d tiles", rec.name or "Helper",
+            math.floor(player:DistTo(z)))
+    end
+    return rec.name or "Helper"
+end
+
+--- Rebuild the list box from ALH.npcs (call when the roster changes).
 function ALH_NPCMenu:refreshList()
     if not self.npcList then return end
 
@@ -129,19 +144,37 @@ function ALH_NPCMenu:refreshList()
     self.npcList:clear()
 
     if #ALH.npcs == 0 then
-        self.npcList:addItem("(no NPCs yet - press Spawn NPC)", nil)
+        self.npcList:addItem("(no helpers - press Spawn NPC)", nil)
         self.npcList.selected = -1
         return
     end
 
-    for i, npc in ipairs(ALH.npcs) do
-        local label = string.format("%s    [%d, %d, %d]",
-            npc.name or ("NPC " .. i), npc.x, npc.y, npc.z)
-        self.npcList:addItem(label, npc)
+    for _, rec in ipairs(ALH.npcs) do
+        self.npcList:addItem(self:rowText(rec), rec)
     end
 
     if prev >= 1 and prev <= #ALH.npcs then
         self.npcList.selected = prev
+    end
+end
+
+--- Refresh each row's text from live data without rebuilding the list, so
+--- selection and scroll position are kept.
+function ALH_NPCMenu:updateRows()
+    if not self.npcList then return end
+    for _, row in ipairs(self.npcList.items) do
+        if row.item then   -- skip the "(no helpers)" placeholder row
+            row.text = self:rowText(row.item)
+        end
+    end
+end
+
+function ALH_NPCMenu:prerender()
+    ISCollapsableWindow.prerender(self)
+    local now = getTimestampMs()
+    if not self._liveUpdateAt or now >= self._liveUpdateAt then
+        self._liveUpdateAt = now + 250   -- 4x/sec is plenty for a distance readout
+        self:updateRows()
     end
 end
 

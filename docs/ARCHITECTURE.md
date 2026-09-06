@@ -124,6 +124,10 @@ register call because ISLayoutManager's restore cache only refreshes on save.
   It runs automatically the first time the window is added to the UI manager
   (`addToUIManager` -> `instantiate` -> `createChildren`). The list box height
   reserves space for the button rows, including the `-debug`-only third row.
+- **List updates in two tiers.** `refreshList()` rebuilds rows when the roster
+  changes (spawn / remove). `updateRows()` rewrites each row's `.text` in place
+  from live data (`rowText(rec)` -> `name -- N tiles` / `name -- dead`), keeping
+  selection and scroll; `prerender()` calls it ~4x/sec.
 - Buttons are dispatched by a string tag: each button gets `btn.internal =
   "SPAWN" | "REMOVE" | "REFRESH" | "CLOSE" | "DEVRELOAD"`, and `onButton(btn)`
   switches on it. Add a button = add a tag + a branch.
