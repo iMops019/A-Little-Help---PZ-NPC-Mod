@@ -5,6 +5,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+- Context-menu callbacks no longer crash when an `ALH.*` entry point is
+  momentarily nil (a partial hot-reload) - they go through a `call()` guard that
+  logs instead. ("Give axe" hit this.)
+
+### Changed
+- **Easier to command a chop**: right-click a helper -> **Chop nearest tree**
+  (`ALH.chopNearestTree` scans ~8 tiles for the closest tree) - no need to select
+  it and aim at a specific tree first. The tree-tile option stays, and now shows
+  a disabled "needs an axe" hint when the selected helper is unarmed.
+
 ### Added
 - **Chop system: felling + resources** (`feat(work)`, D-3): a chopping helper now
   counts swings, and every swing rolls `ZombRand(100)` for a bit of bonus wood

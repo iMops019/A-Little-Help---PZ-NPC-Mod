@@ -193,6 +193,33 @@ function ALH.chopTree(rec, tree)
     ALH.log("chopTree: " .. tostring(rec.name))
 end
 
+--- Find the closest tree to the helper (within ~8 tiles) and chop it.
+function ALH.chopNearestTree(rec)
+    local z = rec.obj
+    if not z or z:isDead() then return end
+
+    local cell = getCell()
+    local zx, zy, zz = math.floor(z:getX()), math.floor(z:getY()), math.floor(z:getZ())
+    local best, bestD
+    for dx = -8, 8 do
+        for dy = -8, 8 do
+            local sq = cell:getGridSquare(zx + dx, zy + dy, zz)
+            if sq and sq:HasTree() then
+                local d = dx * dx + dy * dy
+                if not bestD or d < bestD then best, bestD = sq:getTree(), d end
+            end
+        end
+    end
+
+    if best then
+        ALH.chopTree(rec, best)
+    else
+        ALH.log("chopNearestTree: no tree near " .. tostring(rec.name))
+        local player = getPlayer()
+        if player then player:setHaloNote("No tree near " .. (rec.name or "helper")) end
+    end
+end
+
 -- Squared tile distance that counts as "arrived" for a one-shot order.
 local ARRIVED = { come = 4, go = 2 }
 

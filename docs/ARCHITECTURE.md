@@ -107,7 +107,8 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.comeHere(rec)` / `ALH.goTo(rec, square)` *(Main)* | orderTo + set `rec.order` to `"come"` / `"go"` |
 | `ALH.follow(rec)` / `ALH.stay(rec)` *(Main)* | `rec.order = "follow"` (OnTick re-paths) / clear order + `setPath2(nil)` |
 | `ALH.giveAxe(rec)` *(Main)* | `AddItem("Base.Axe")` + set primary & secondary hand item; `rec.armed = true` |
-| `ALH.chopTree(rec, tree)` *(Main)* | `rec.order = "chop"` + `rec.chopTree`; `tickHelper` walks to it and loops `WeaponHitEffects` |
+| `ALH.chopTree(rec, tree)` *(Main)* | `rec.order = "chop"` + `rec.chopTree`; `tickHelper` walks to it and loops `chopSwing` |
+| `ALH.chopNearestTree(rec)` *(Main)* | scan ~8 tiles for the closest tree, then `ALH.chopTree` |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -159,11 +160,14 @@ test)`. Context callbacks are invoked by the engine as
   "Helpers: N" count.
   Adds **"Send `<selected>` here"** when `ALH.selected` is a living helper.
 - **`<name>  (helper)`** per living helper on the clicked tile -> Come here /
-  Select / Send away. `worldobjects` carries only static tile objects, not
-  characters, so we find helpers ourselves: `helpersAt(square)` walks `ALH.npcs`
-  for one whose square is at the clicked Z and within ~1.5 tiles
-  (`DistToSquared < 2.25`). This submenu is the spine - movement/work commands
-  get added here.
+  Follow me|Stay / Give axe|Chop nearest tree / Select / Send away.
+  `worldobjects` carries only static tile objects, not characters, so we find
+  helpers ourselves: `helpersAt(square)` walks `ALH.npcs` for one whose square is
+  at the clicked Z and within ~1.5 tiles (`DistToSquared < 2.25`).
+
+Every callback goes through a local `call(name, ...)` that no-ops (with a log) if
+`ALH[name]` is momentarily nil - a partial hot-reload otherwise crashes the
+click.
 
 ## Commands (Phase C)
 
