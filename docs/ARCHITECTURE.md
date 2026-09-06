@@ -196,15 +196,23 @@ The list row shows `(coming)` / `(going)` / `(following)` / `(chopping)`.
 `setPrimaryHandItem` / `setSecondaryHandItem`, both hands - two-hander). Row shows
 `[axe]`.
 
-`ALH.chopTree(rec, tree)` sets `rec.order = "chop"` + `rec.chopTree`. `tickHelper`
-walks it to the tree (`ALH.orderTo(rec, tree:getSquare())`, pathfinding routes
-adjacent), then every `CHOP_INTERVAL` ms: `z:setPath2(nil)`, `z:faceThisObject`,
-`tree:WeaponHitEffects(z, axe)` - chip particles + chop sound. **D-2 is
-effects-only**: no `WeaponHit` (damage), no felling, no resources - and **no
-arm-swing animation** (that's a timed-action anim, player-only; a zombie would
-need direct anim-variable driving - deferred). D-3 adds a custom tree-HP counter
-(~100 swings), felling, and an RNG loot table - deliberately not vanilla
-`ISChopTreeAction` (player-fatigue-gated, fast fell).
+`ALH.chopTree(rec, tree)` sets `rec.order = "chop"`, `rec.chopTree`,
+`rec.chopHits = 0`. `tickHelper` walks it to the tree (`ALH.orderTo(rec,
+tree:getSquare())`, pathfinding routes adjacent), then every `CHOP_INTERVAL` ms
+runs `chopSwing`:
+
+- `tree:WeaponHitEffects(z, axe)` - chip particles + chop sound
+- `rec.chopHits += 1`
+- one `ZombRand(100)` roll against `CHOP_LOOT` (tiered - twigs 14% / branch 6% /
+  sapling 2% / log 1%, nothing otherwise); a hit drops that item on the tree's
+  square via `square:AddWorldInventoryItem`
+- at `rec.chopHits >= ALH.CHOP_SWINGS` (100, ~7x a player's): `tree:toppleTree(z)`
+  fells it + drops the vanilla log haul, order clears, halo note
+
+This is deliberately **not** vanilla `ISChopTreeAction` (player-fatigue-gated,
+~15 swings, timed-action). Still missing: the **arm-swing animation** - a
+timed-action anim, player-only; a zombie needs direct anim-variable driving,
+deferred to its own slice. The window row shows `(chopping N/100)`.
 
 ## Spawning (Phase B)
 

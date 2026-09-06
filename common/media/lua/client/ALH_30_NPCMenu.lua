@@ -134,7 +134,9 @@ function ALH_NPCMenu:rowText(rec)
     if rec.order == "come" then order = "  (coming)"
     elseif rec.order == "go" then order = "  (going)"
     elseif rec.order == "follow" then order = "  (following)"
-    elseif rec.order == "chop" then order = "  (chopping)" end
+    elseif rec.order == "chop" then
+        order = string.format("  (chopping %d/%d)", rec.chopHits or 0, ALH.CHOP_SWINGS)
+    end
     local axe = rec.armed and "  [axe]" or ""
     return string.format("%s  --  %s%s%s", rec.name or "Helper", dist, axe, order)
 end

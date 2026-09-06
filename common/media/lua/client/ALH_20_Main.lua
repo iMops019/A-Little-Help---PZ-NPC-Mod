@@ -168,16 +168,17 @@ end
 --- "Stay" - stop and hold position, drop any work.
 function ALH.stay(rec)
     rec.order, rec.orderTile, rec.followAt = nil, nil, nil
-    rec.chopTree, rec.chopAt, rec.chopMoveAt = nil, nil, nil
+    rec.chopTree, rec.chopHits, rec.chopAt, rec.chopMoveAt = nil, nil, nil, nil
     if rec.obj and not rec.obj:isDead() then
         rec.obj:setPath2(nil)   -- drop the current path
     end
     ALH.log("stay: " .. tostring(rec.name))
 end
 
---- Command an armed helper to chop `tree`: walk to it, then hit it on a loop.
---- D-2 does the loop with hit *effects* only (chips + sound). No felling, no
---- resources, no arm-swing animation - that's D-3 and an anim-system follow-up.
+--- Command an armed helper to chop `tree`: walk to it, then hit it on a loop
+--- until it falls (ALH.CHOP_SWINGS hits - ~7x a player's, since the helper never
+--- tires). Each swing has a small chance to shed a bit of wood; felling drops
+--- the full haul. No arm-swing animation yet (timed-action anim = player-only).
 function ALH.chopTree(rec, tree)
     local z = rec.obj
     if not z or z:isDead() or not tree then return end
@@ -187,6 +188,7 @@ function ALH.chopTree(rec, tree)
     end
     rec.order    = "chop"
     rec.chopTree = tree
+    rec.chopHits = 0
     rec.chopAt, rec.chopMoveAt = 0, 0
     ALH.log("chopTree: " .. tostring(rec.name))
 end
@@ -197,6 +199,42 @@ local ARRIVED = { come = 4, go = 2 }
 local CHOP_REACH    = 2.6    -- <= this (squared) from the tree tile = close enough to swing
 local CHOP_INTERVAL = 1200   -- ms between swings
 local FOLLOW_GAP    = 4      -- squared distance from the player before a follower re-paths
+
+ALH.CHOP_SWINGS = 100        -- swings to fell a tree (the window shows N/this)
+
+-- Per-swing bonus wood: one roll of ZombRand(100), first matching tier wins,
+-- most swings shed nothing. Tune freely.
+local CHOP_LOOT = {
+    { under = 14, item = "Base.Twigs"       },  --  0..13  14%
+    { under = 20, item = "Base.TreeBranch2" },  -- 14..19   6%
+    { under = 22, item = "Base.Sapling"     },  -- 20..21   2%
+    { under = 23, item = "Base.Log"         },  -- 22       1%
+}
+
+--- One swing: effects, a bonus-wood roll, and felling at the swing cap.
+local function chopSwing(rec, z, tree, tsq)
+    local axe = z:getPrimaryHandItem()
+    if axe then tree:WeaponHitEffects(z, axe) end
+
+    rec.chopHits = (rec.chopHits or 0) + 1
+
+    local roll = ZombRand(100)
+    for _, tier in ipairs(CHOP_LOOT) do
+        if roll < tier.under then
+            tsq:AddWorldInventoryItem(tier.item, tsq:getX() + 0.5, tsq:getY() + 0.5, tsq:getZ())
+            break
+        end
+    end
+
+    if rec.chopHits >= ALH.CHOP_SWINGS then
+        tree:toppleTree(z)   -- fell it + drop the vanilla logs
+        ALH.log(string.format("chop: %s felled a tree in %d swings",
+            tostring(rec.name), rec.chopHits))
+        local player = getPlayer()
+        if player then player:setHaloNote((rec.name or "Helper") .. " felled a tree") end
+        rec.order, rec.chopTree, rec.chopHits = nil, nil, nil
+    end
+end
 
 --- One helper's per-tick AI. Called for every roster entry each tick.
 local function tickHelper(rec, player)
@@ -236,8 +274,7 @@ local function tickHelper(rec, player)
             z:faceThisObject(tree)
             if now - (rec.chopAt or 0) >= CHOP_INTERVAL then
                 rec.chopAt = now
-                local axe = z:getPrimaryHandItem()
-                if axe then tree:WeaponHitEffects(z, axe) end
+                chopSwing(rec, z, tree, tsq)
             end
         end
 
