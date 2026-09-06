@@ -98,8 +98,8 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.npcs` *(Main)* | array of records `{ id, name, desc, obj, x, y, z }` - the model |
 | `ALH.menu` *(Main)* | the live `ALH_NPCMenu` instance, or `nil` when closed |
 | `ALH.windowRect` *(Main)* | `{x,y,w,h}` of the window's last position, or `nil` for a centred default |
-| `ALH.spawnNPC(square)` *(Main)* | spawn a real `IsoSurvivor`, add a record; refreshes the menu |
-| `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()`, drop the record; refreshes the menu |
+| `ALH.spawnNPC(square)` *(Main)* | add a record (rolls a `SurvivorDesc`; **no world actor yet** - see B-1 finding below) |
+| `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()` if any, drop the record; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
@@ -152,26 +152,37 @@ code, not the UI (a two-button "Generate then Spawn" flow only earns its place i
 NPC generation becomes a previewed choice - traits, outfit - which is a later
 feature).
 
-`ALH.spawnNPC(square)`:
+### B-1 finding: `IsoSurvivor` is a dead end in B42
 
-1. `SurvivorFactory.CreateSurvivor()` -> `SurvivorDesc` (data: body, clothes),
-   then `SurvivorFactory.randomName(desc)`.
-2. `SurvivorFactory.InstansiateInCell(desc, cell, x, y, z)` -> `IsoSurvivor`.
-   This only *constructs* it (verified by disassembly - it's `new IsoSurvivor`
-   plus `desc:setInstance`); it does **not** add it to the world.
-3. Guard against a half-built actor (`npc:getSquare()` nil - the constructor bails
-   on a bad tile / id clash, same as the animal spawners).
-4. `cell:addMovingObject(npc)` to put it in the update/render set, then
-   `setX/Y/Z` + `setCurrent(square)` to pin it.
-5. `npc:Say("Hello, I'm ready to work!")`, record `{ desc, obj, ... }`.
+The spawn *worked* - `SurvivorFactory.CreateSurvivor()` +
+`SurvivorFactory.InstansiateInCell(desc, cell, x, y, z)` returned a valid
+`IsoSurvivor` ("Ethel Wetzel"), and the constructor already adds it to the cell's
+object list. But:
 
-`ALH.removeNPC(rec)` calls `rec.obj:removeFromWorld()` -
-`IsoSurvivor:Despawn()` only nils the `desc` link, it does not remove the actor.
+- **`IsoGameCharacter`'s constructor sets `bodyDamage` to `null` for anything
+  that isn't an `IsoPlayer` or `IsoAnimal`** (verified by disassembly - the
+  field is `final`). `IsoSurvivor` lands in the `null` branch.
+- Its inherited `update()` calls `getBodyDamage().getNumPartsBleeding()` every
+  tick -> `NullPointerException` at `IsoGameCharacter.updateInternal:9120` ->
+  the game crashes.
+- `Say()` also casts to `IsoPlayer` internally (`ProcessSay:7257`) -> another
+  `ClassCastException`.
 
-B-1 is exploratory - `InstansiateInCell` is dead code in the base game - so
-`spawnNPC` logs every step. Open questions it answers by observation: does the
-survivor render / stand / T-pose, does anything drive its AI, do zombies attack
-it on sight. Those drive B-2 (emote) and Phase C (faction / follow).
+`IsoSurvivor` is vestigial - TIS left the class in but its update path assumes an
+init its own constructor doesn't do. Not patchable from Lua. B42 has no working
+friendly-NPC class; B43 is "the NPC build".
+
+`ALH.spawnNPC` is a **stub** (records a `SurvivorDesc` for name/appearance, no
+world actor) until a foundation is chosen:
+
+- **A - tamed `IsoZombie`** (`getVirtualZombieManager():createRealZombieNow`):
+  fully wired (bodyDamage, AI, animation, save). Implements `IHumanVisual` -
+  `setReanimatedPlayer(true)` + `dressInNamedOutfit(...)` gives a human look;
+  `setNoTeeth`, `setTarget(nil)`, `makeInactive` + a per-tick AI override tame
+  it. Zombies ignore other zombies, so it's invisible to the horde. What B41
+  companion mods did.
+- **B - headless `IsoPlayer`**: fully initialised, but the engine assumes
+  `IsoPlayer`s are controlled and occupy world player slots - fragile.
 
 ## Adding a feature - checklist
 

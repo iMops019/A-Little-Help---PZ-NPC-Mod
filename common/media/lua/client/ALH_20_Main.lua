@@ -11,13 +11,17 @@ require "ISUI/ISLayoutManager"
 local WINDOW_W, WINDOW_H = 340, 400
 local LAYOUT_NAME        = "ALH_helper"   -- ISLayoutManager key (global namespace)
 
--- Tracked NPCs. Each record:
---   { id, name, desc = <SurvivorDesc>, obj = <IsoSurvivor>, x, y, z }
--- `desc` is kept so a future version can respawn or re-roll the same NPC without
--- touching the roster model (see the design notes / ENGINEERING.md).
+-- Tracked NPCs. Each record: { id, name, desc, obj, x, y, z }
+--   desc = <SurvivorDesc>   (appearance/name data - kept for future respawn)
+--   obj  = the live world actor, or nil (see below)
+--
+-- B-1 finding: IsoSurvivor is dead code in B42 - its constructor sets bodyDamage
+-- to null (only IsoPlayer / IsoAnimal get one) but its inherited update() calls
+-- getBodyDamage() every tick -> guaranteed NPE. `bodyDamage` is final, so it
+-- can't be fixed from Lua, and Say() is player-only too (casts to IsoPlayer).
+-- spawnNPC is back to a stub while we choose a Phase-B foundation (tamed
+-- IsoZombie vs headless IsoPlayer) - see docs/ARCHITECTURE.md "Spawning".
 ALH.npcs = ALH.npcs or {}
-
-local HELLO_LINE = "Hello, I'm ready to work!"
 
 -- Remembered window geometry { x, y, w, h }, or nil for a centred default.
 -- Updated every time the window closes, so a G-toggle reopens where you left it.
@@ -25,74 +29,40 @@ local HELLO_LINE = "Hello, I'm ready to work!"
 -- writes it back on game save, so it also survives a restart.
 ALH.windowRect = ALH.windowRect or nil
 
---- Spawn a real IsoSurvivor at `square` and add a record for it.
----
---- B-1 is exploratory: SurvivorFactory.InstansiateInCell is never called by the
---- base game, so this logs each step to console.txt. InstansiateInCell only
---- constructs the survivor - it does not add it to the world - so we do that and
---- pin its position afterwards.
----
+--- Add an NPC record. Stub for now (no world actor) - the Phase-B foundation
+--- decision (tamed IsoZombie vs headless IsoPlayer) is pending. We still roll a
+--- real SurvivorDesc so the name/appearance is ready when spawning lands.
 --- @param square IsoGridSquare|nil  target tile (default: the player's)
---- @return table|nil  the record that was added, or nil on failure
+--- @return table  the record that was added
 function ALH.spawnNPC(square)
     local player = getPlayer()
     square = square or (player and player:getCurrentSquare()) or nil
-    if not square then
-        ALH.log("spawnNPC: no target square")
-        return nil
-    end
-
-    local cell = getCell()
-    local sx, sy, sz = square:getX(), square:getY(), square:getZ()
-    ALH.log(string.format("spawnNPC: attempting spawn at %d,%d,%d", sx, sy, sz))
+    local sx = square and square:getX() or 0
+    local sy = square and square:getY() or 0
+    local sz = square and square:getZ() or 0
 
     local desc = SurvivorFactory.CreateSurvivor()
     SurvivorFactory.randomName(desc)
-
-    local npc = SurvivorFactory.InstansiateInCell(desc, cell, sx, sy, sz)
-    if not npc then
-        ALH.log("spawnNPC: InstansiateInCell returned nil")
-        return nil
-    end
-
-    -- The constructor can bail mid-build on a bad tile / id clash and hand back a
-    -- half-built object (this is what the animal spawners guard against).
-    if not npc:getSquare() then
-        ALH.log("spawnNPC: half-built survivor (no square), discarding")
-        npc:removeFromWorld()
-        return nil
-    end
-
-    -- Put it in the world so it renders and ticks, then pin it to the tile.
-    cell:addMovingObject(npc)
-    npc:setX(sx + 0.5)
-    npc:setY(sy + 0.5)
-    npc:setZ(sz)
-    npc:setCurrent(square)
-
-    npc:Say(HELLO_LINE)
+    local fore, sur = desc:getForename(), desc:getSurname()
 
     local n = #ALH.npcs + 1
-    local fore, sur = desc:getForename(), desc:getSurname()
-    local name = (fore and sur) and (fore .. " " .. sur) or ("Survivor #" .. n)
-
     local rec = {
         id   = "alh_npc_" .. n,
-        name = name,
+        name = (fore and sur) and (fore .. " " .. sur) or ("Survivor #" .. n),
         desc = desc,
-        obj  = npc,
+        obj  = nil,
         x = sx, y = sy, z = sz,
     }
     table.insert(ALH.npcs, rec)
 
-    ALH.log(string.format("spawnNPC: spawned '%s' at %d,%d,%d", name, sx, sy, sz))
-    if player then player:setHaloNote("A Little Help: spawned " .. name) end
+    ALH.log(string.format("spawnNPC: recorded '%s' at %d,%d,%d (no actor - Phase B foundation pending)",
+        rec.name, sx, sy, sz))
+    if player then player:setHaloNote("A Little Help: recorded " .. rec.name) end
     if ALH.menu then ALH.menu:refreshList() end
     return rec
 end
 
---- Remove an NPC: take its actor out of the world, then drop the record.
---- (IsoSurvivor:Despawn() only nils the desc link, so we use removeFromWorld.)
+--- Remove an NPC: take its actor out of the world (if any), then drop the record.
 function ALH.removeNPC(rec)
     if rec.obj then
         rec.obj:removeFromWorld()

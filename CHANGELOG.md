@@ -5,14 +5,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Investigated
+- **B-1: `IsoSurvivor` is a dead end in B42.** `SurvivorFactory.CreateSurvivor` +
+  `InstansiateInCell` spawn a survivor fine, but `IsoGameCharacter`'s constructor
+  nulls `bodyDamage` for non-player/non-animal characters (`final` field) and the
+  inherited `update()` NPEs on it every tick. `Say()` also casts to `IsoPlayer`.
+  `spawnNPC` reverted to a stub (still rolls a `SurvivorDesc` for name/look).
+  Next: pick a foundation - tamed `IsoZombie` or headless `IsoPlayer`. See
+  `docs/ARCHITECTURE.md`.
+
 ### Added
-- **Real NPC spawn** (`feat(spawn)`, B-1): Spawn NPC / right-click *Spawn NPC
-  Here* now creates an actual `IsoSurvivor` at the tile
-  (`SurvivorFactory.CreateSurvivor` + `InstansiateInCell` + `cell:addMovingObject`),
-  says "Hello, I'm ready to work!", and records the live actor + its
-  `SurvivorDesc`. Remove takes the actor out of the world (`removeFromWorld`).
-  Exploratory - `InstansiateInCell` is unused by the base game, so `spawnNPC`
-  logs each step. No AI, no faction, no persistence yet.
 - **ESC closes the window** (`feat(ui)`): when the helper window is open, ESC
   closes it and is consumed, so it doesn't also open the pause menu; a second ESC
   does. Standard vanilla build/craft/map behaviour.
