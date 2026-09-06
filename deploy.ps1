@@ -1,27 +1,132 @@
-# A Little Help - copy the mod into the Project Zomboid mods folder for testing.
-# Run from anywhere:   powershell -ExecutionPolicy Bypass -File deploy.ps1
-#
-# Only the actual mod payload (mod.info + media/) is copied. Repo files
-# (docs, README, git, this script) are left behind.
+<#
+    A Little Help - dev deploy
 
-$src = $PSScriptRoot
-$dst = "C:\Users\conov\Zomboid\mods\ALittleHelp"
+    Copies the mod into the Project Zomboid user folder and (by default) makes
+    sure it is enabled + present in the mod-order list the "New Game" screen
+    reads from, so you only have to click through the mod screens, never
+    re-tick anything.
 
-Write-Host "Deploying A Little Help"
-Write-Host "  from $src"
-Write-Host "  to   $dst"
+    There is no "build" for a PZ mod - the game reads the .lua files directly.
+    "Deploy" just means: copy media/ + mod.info into the right place.
 
-New-Item -ItemType Directory -Force -Path $dst | Out-Null
+    Usage:
+      powershell -ExecutionPolicy Bypass -File deploy.ps1
+      powershell -ExecutionPolicy Bypass -File deploy.ps1 -Saves latest
+      powershell -ExecutionPolicy Bypass -File deploy.ps1 -Launch
+      powershell -ExecutionPolicy Bypass -File deploy.ps1 -NoEnable
 
-# media/ : mirror (adds new files, deletes removed ones)
-robocopy "$src\media" "$dst\media" /MIR /NFL /NDL /NJH /NJS /NP
-$code = $LASTEXITCODE
-if ($code -ge 8) { Write-Error "robocopy failed (exit $code)"; exit $code }
+    Params:
+      -Saves  none|latest|all   also add the mod to existing saves' mods.txt
+                                (default: none - use a New Game to test)
+      -Launch                    start Project Zomboid (console build) afterwards
+      -NoEnable                  copy files only, don't touch any mod list
+#>
 
-# mod.info : single file
-Copy-Item "$src\mod.info" "$dst\mod.info" -Force
+param(
+    [ValidateSet('none', 'latest', 'all')]
+    [string]$Saves = 'none',
+    [switch]$Launch,
+    [switch]$NoEnable
+)
 
-Write-Host ""
-Write-Host "Done. In Project Zomboid: enable 'A Little Help' in the Mods menu,"
-Write-Host "then load a save and press G. Watch C:\Users\conov\Zomboid\console.txt for [A Little Help] lines."
+$ErrorActionPreference = 'Stop'
+
+$MOD_ID   = 'ALittleHelp'
+$src      = $PSScriptRoot
+$zomboid  = 'C:\Users\conov\Zomboid'
+$modDst   = Join-Path $zomboid "mods\$MOD_ID"
+$pzBat    = 'C:\Program Files (x86)\Steam\steamapps\common\ProjectZomboid\ProjectZomboid64ShowConsole.bat'
+
+function Write-Head($t) { Write-Host "`n$t" -ForegroundColor Cyan }
+
+# --- UTF-8 (no BOM), CRLF - matches how PZ writes these files -----------------
+function Save-PzList($path, [string[]]$lines) {
+    $text = ($lines -join "`r`n") + "`r`n"
+    [System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# --- insert "mod = <id>," just before the mods{} block's closing brace -------
+function Add-ModToList($path) {
+    $leaf = Split-Path $path -Leaf
+    if (-not (Test-Path $path)) {
+        Write-Host "  . $leaf not found - skip (launch the game once to create it)" -ForegroundColor DarkYellow
+        return
+    }
+
+    $lines = [System.IO.File]::ReadAllLines($path)
+    foreach ($l in $lines) {
+        if ($l -match "^\s*mod\s*=\s*$([regex]::Escape($MOD_ID))\s*,?\s*$") {
+            Write-Host "  = $leaf already lists $MOD_ID"
+            return
+        }
+    }
+
+    $out = [System.Collections.Generic.List[string]]::new()
+    $section = $null          # $null -> 'mods' -> 'maps'
+    $done = $false
+    foreach ($l in $lines) {
+        $t = $l.Trim()
+        if ($null -eq $section -and $t -eq 'mods') { $section = 'mods' }
+        elseif ($section -eq 'mods' -and $t -eq 'maps') { $section = 'maps' }
+
+        if ($section -eq 'mods' -and -not $done -and $t -eq '}') {
+            $out.Add("    mod = $MOD_ID,")
+            $done = $true
+        }
+        $out.Add($l)
+    }
+
+    if (-not $done) {
+        Write-Host "  ! couldn't find a mods{} block in $leaf - not modified" -ForegroundColor Red
+        return
+    }
+    Save-PzList $path $out
+    Write-Host "  + added $MOD_ID to $leaf" -ForegroundColor Green
+}
+
+# ---------------------------------------------------------------------------
+Write-Head "1. Copy mod -> $modDst"
+New-Item -ItemType Directory -Force -Path $modDst | Out-Null
+robocopy "$src\media" "$modDst\media" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+if ($LASTEXITCODE -ge 8) { throw "robocopy failed (exit $LASTEXITCODE)" }
+Copy-Item "$src\mod.info" "$modDst\mod.info" -Force
+$fileCount = (Get-ChildItem "$modDst\media" -Recurse -File).Count
+Write-Host "  copied mod.info + $fileCount file(s) under media/"
+
+if (-not $NoEnable) {
+    Write-Head "2. Enable in the New Game mod list"
+    Add-ModToList (Join-Path $zomboid 'mods\default.txt')
+
+    if ($Saves -ne 'none') {
+        Write-Head "3. Add to existing saves ($Saves)"
+        $saveDirs = Get-ChildItem "$zomboid\Saves" -Recurse -Depth 1 -Directory -ErrorAction SilentlyContinue |
+            Where-Object { Test-Path (Join-Path $_.FullName 'mods.txt') }
+        if ($Saves -eq 'latest') {
+            $saveDirs = $saveDirs | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        }
+        foreach ($d in $saveDirs) {
+            Write-Host "  $($d.Name)"
+            Add-ModToList (Join-Path $d.FullName 'mods.txt')
+        }
+        if (-not $saveDirs) { Write-Host "  (no saves with a mods.txt found)" }
+    }
+}
+
+Write-Head "Done."
+Write-Host @"
+Next:
+  - Launch PZ. New Game -> the mod screen already has 'A Little Help'
+    ticked and in the load order; just Next through it.
+  - In game: press G, or right-click the ground -> 'ALH NPC'.
+  - Live log + Lua errors: the console window from
+    ProjectZomboid64ShowConsole.bat, or $zomboid\console.txt
+    (grep for [A Little Help]).
+"@
+
+if ($Launch) {
+    Write-Head "Launching Project Zomboid (console build)..."
+    if (Test-Path $pzBat) { Start-Process -FilePath $pzBat -WorkingDirectory (Split-Path $pzBat) }
+    else { Start-Process 'steam://rungameid/108600' }
+}
+
 exit 0

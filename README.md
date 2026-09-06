@@ -42,7 +42,8 @@ A-Little-Help/
     ALH_ContextMenu.lua    the "ALH NPC" right-click submenu
   docs/                    ARCHITECTURE.md, ROADMAP.md
   CHANGELOG.md
-  deploy.ps1               dev: copy media/ + mod.info into the game
+  deploy.ps1               dev: copy into the game + auto-enable
+  dev-deploy.bat           double-click wrapper for deploy.ps1
   README.md
 ```
 
@@ -53,39 +54,47 @@ never reaches the game folder. Flat `media/` is fine on B42 42.20 - the bundled
 
 ## Installing / testing
 
-Your PZ user folder is `C:\Users\conov\Zomboid\`. Mods live in
-`C:\Users\conov\Zomboid\mods\`.
+There is no build step - "deploy" just copies `media/` + `mod.info` into the PZ
+user folder (`C:\Users\conov\Zomboid\mods\ALittleHelp\`). `deploy.ps1` also ticks
+the mod on and drops it into the load-order list the **New Game** screen reads
+(`Zomboid\mods\default.txt`), so you never re-tick anything by hand.
 
-### Option A - one command (recommended)
+### Deploy
 
 ```bash
 powershell -ExecutionPolicy Bypass -File "C:\Users\conov\Documents\ALittleHelp\deploy.ps1"
 ```
 
-This copies `media/` + `mod.info` to `C:\Users\conov\Zomboid\mods\ALittleHelp\`
-and nothing else. Re-run it after every change.
+or double-click `dev-deploy.bat`. Options:
 
-### Option B - manual copy/paste
+| Command | Effect |
+| --- | --- |
+| `deploy.ps1` | copy files + enable in the New Game mod list |
+| `deploy.ps1 -Saves latest` | also add it to the most recent existing save |
+| `deploy.ps1 -Saves all` | also add it to every existing save |
+| `deploy.ps1 -Launch` | deploy, then start PZ (console build) |
+| `deploy.ps1 -NoEnable` | copy files only, touch no mod list |
 
-1. Make a folder `C:\Users\conov\Zomboid\mods\ALittleHelp\`
-2. Copy `mod.info` and the whole `media\` folder into it
+### The loop
 
-### Then, in-game
+1. Run `deploy.ps1` (add `-Launch` to start the game too).
+2. **New Game** - the mod screen already shows **A Little Help** enabled and in
+   the order; click Next / Play through the mod-check and mod-order screens.
+3. In game: press **`G`**, or right-click the ground -> **`ALH NPC`**.
+4. Change code -> re-run `deploy.ps1` -> **restart PZ** (Lua is read at launch;
+   with `-debug` you can `Reload Lua` from the debug menu instead).
 
-1. Launch Project Zomboid
-2. **Main Menu > Mods** - enable **A Little Help**, restart if it asks
-3. Start or load a save. If prompted for the mod list, make sure **A Little Help**
-   is in the **active** column
-4. In game, press **`G`**. Right-click the ground for the **`ALH NPC`** menu.
-
-Lua changes need a game restart (or `Reload Lua` from the debug menu) to take
-effect - the mods list itself only needs re-enabling if you add/rename files.
+Testing against an **existing** save instead of a new one? That save keeps its
+own mod list - use `-Saves latest` (or enable the mod in that save's load screen
+once).
 
 ## Debugging
 
-- Console log: `C:\Users\conov\Zomboid\console.txt` - look for `[A Little Help]` lines
-- Launch PZ with `-debug` to get the in-game debug menu and Lua reload
-- Lua errors surface as a red box in-game and a stack trace in `console.txt`
+- **Live log:** launch via `ProjectZomboid64ShowConsole.bat` for a console window
+  that streams `[A Little Help]` prints and Lua stack traces as they happen.
+- **After the fact:** `C:\Users\conov\Zomboid\console.txt`, search `[A Little Help]`.
+- Launch PZ with `-debug` for the in-game debug menu (`Reload Lua`, spawn tools).
+- Lua errors also surface as a red box in-game.
 
 ## Known gaps / next steps
 

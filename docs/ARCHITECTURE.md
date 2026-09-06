@@ -24,9 +24,16 @@ A-Little-Help/
         ALH_NPCMenu.lua
         ALH_ContextMenu.lua
     scripts/   (future)         item / recipe / vehicle definitions
-  deploy.ps1                    dev: copy media/ + mod.info into the game
+  deploy.ps1                    dev: copy into the game + auto-enable
+  dev-deploy.bat                double-click wrapper for deploy.ps1
   docs/                         you are here
 ```
+
+`deploy.ps1` copies `media/` + `mod.info` into `Zomboid\mods\ALittleHelp\`, then
+inserts `mod = ALittleHelp,` into `Zomboid\mods\default.txt` (the ordered list the
+New Game screen reads) so the mod is always pre-enabled. It is idempotent.
+`-Saves latest|all` also patches existing saves' `mods.txt`; `-Launch` starts the
+game; `-NoEnable` skips the list edits. Full loop is in the README.
 
 `media/lua/client/` is the only code path right now. When NPC logic needs to run
 authoritatively (multiplayer, or anything the server should own) it goes in

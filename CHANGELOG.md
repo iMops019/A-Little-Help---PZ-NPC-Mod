@@ -3,6 +3,19 @@
 All notable changes to **A Little Help** are recorded here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- `deploy.ps1` now auto-enables the mod: inserts `mod = ALittleHelp,` into
+  `Zomboid\mods\default.txt` (the New Game load-order list), idempotently.
+  `-Saves latest|all` patches existing saves' `mods.txt`; `-Launch` starts the
+  game (console build); `-NoEnable` skips the list edits.
+- `dev-deploy.bat` - double-click wrapper for `deploy.ps1`.
+
+### Changed
+- `deploy.ps1` copies only `media/` + `mod.info` (was mirroring the whole folder
+  with excludes).
+
 ## [0.1.0] - 2026-09-05
 
 Initial scaffold. UI and hooks only - nothing is spawned in the world yet.
