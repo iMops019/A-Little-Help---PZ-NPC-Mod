@@ -170,6 +170,12 @@ function ALH.toggleMenu()
     if ALH.menu then ALH.closeMenu() else ALH.openMenu() end
 end
 
+--- Open the window and select this helper's row (used by the right-click menu).
+function ALH.selectNPC(rec)
+    ALH.openMenu()
+    if ALH.menu then ALH.menu:selectRec(rec) end
+end
+
 -- G (rebindable) toggles the window.
 --
 -- We use OnKeyStartPressed, not OnKeyPressed: the engine skips OnKeyStartPressed

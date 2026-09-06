@@ -6,6 +6,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Right-click a helper** (`feat(ui)`, B-4): right-clicking a tile a living
+  helper stands on adds a top-level `<name>  (helper)` option -> **Select**
+  (open the window, highlight its row) / **Send away** (remove it). `helpersAt()`
+  finds them by proximity to the clicked square since `worldobjects` never
+  contains characters. This submenu is where movement/work commands will go.
 - **Live helper status in the list** (`feat(ui)`, B-3): each row shows
   `name -- N tiles` (distance to the player) or `name -- dead`, refreshed ~4x/sec
   while the window is open (`prerender` -> `updateRows`, text-only so selection

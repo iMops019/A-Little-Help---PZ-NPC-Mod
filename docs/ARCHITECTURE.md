@@ -101,6 +101,7 @@ Defined in `ALH_00_Core.lua` unless noted.
 | `ALH.spawnNPC(square)` *(Main)* | spawn a tamed-zombie helper (`createRealZombieNow` + `setNoTeeth` + marker), add a record |
 | `ALH.removeNPC(rec)` *(Main)* | `rec.obj:removeFromWorld()`, drop the record; refreshes the menu |
 | `ALH.openMenu()` / `ALH.closeMenu()` / `ALH.toggleMenu()` *(Main)* | window control |
+| `ALH.selectNPC(rec)` *(Main)* | open the window and select `rec`'s row (right-click "Select") |
 | `ALH.rememberWindowRect(window)` *(Main)* | snapshot geometry into `ALH.windowRect` (the window calls this as it closes) |
 
 `ALH.npcs` is the single source of truth. The window is a **view** - it never
@@ -143,10 +144,21 @@ register call because ISLayoutManager's restore cache only refreshes on save.
 ## The right-click menu (`ALH_40_ContextMenu.lua`)
 
 Hooks `Events.OnFillWorldObjectContextMenu(playerIndex, context, worldobjects,
-test)`. Adds one top-level `ALH NPC` option carrying a submenu. Context callbacks
-are invoked by the engine as `fn(option.target, param1, param2, ...)` - that is
-why `onSpawnHere(worldobjects, player, square)` is ordered the way it is
+test)`. Context callbacks are invoked by the engine as
+`fn(option.target, param1, param2, ...)` - that is why
+`onSpawnHere(worldobjects, player, square)` is ordered the way it is
 (`target` = `worldobjects`, then the params passed to `addOption`).
+
+- **`ALH NPC`** (always) -> Spawn NPC Here / Open Helper Menu / disabled
+  "Helpers: N" count.
+- **`<name>  (helper)`** per living helper on the clicked tile -> Select / Send
+  away. `worldobjects` carries only static tile objects, not characters, so we
+  find helpers ourselves: `helpersAt(square)` walks `ALH.npcs` for one whose
+  square is at the clicked Z and within ~1.5 tiles (`DistToSquared < 2.25`). This
+  submenu is the spine - movement/work commands get added here.
+
+`ALH.selectNPC(rec)` (Main) opens the window and calls `ALH_NPCMenu:selectRec` to
+highlight that helper's row.
 
 ## Spawning (Phase B)
 

@@ -183,6 +183,17 @@ function ALH_NPCMenu:getSelectedNPC()
     return row and row.item or nil
 end
 
+--- Select the list row backing `rec`, if it's in the list.
+function ALH_NPCMenu:selectRec(rec)
+    if not self.npcList then return end
+    for i, row in ipairs(self.npcList.items) do
+        if row.item == rec then
+            self.npcList.selected = i
+            return
+        end
+    end
+end
+
 function ALH_NPCMenu:onButton(button)
     local id = button.internal
 
